@@ -18,7 +18,7 @@ const ChatWidget = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your MNA Legal Assistant. I can help you find files, check case statuses, and navigate the system. What can I help you with today?',
+      text: 'Hello! I\'m your MNA Africa Legal Assistant. I can help you find files, check case statuses, see who\'s on leave, and review pending approvals. What can I help you with today?',
       isUser: false,
       timestamp: new Date()
     }
@@ -54,6 +54,16 @@ const ChatWidget = () => {
   const generateResponse = (query: string): string => {
     const lowerQuery = query.toLowerCase();
     
+    // Leave status responses
+    if (lowerQuery.includes('leave') || lowerQuery.includes('who is on leave') || lowerQuery.includes('on leave')) {
+      return 'Currently, Sarah Johnson is on leave from June 15-17, 2024 (3 days annual leave). All other team members are available and working. Would you like more details about upcoming leave requests?';
+    }
+    
+    // Pending approvals responses
+    if (lowerQuery.includes('approval') || lowerQuery.includes('pending') || lowerQuery.includes('approve')) {
+      return 'You have 4 pending approvals:\n• Sarah Johnson - Leave Request (Medium Priority)\n• Michael Brown - Budget Approval for legal research subscription (High Priority)\n• Emily Davis - Client Contract for TechCorp Industries (High Priority)\n• David Wilson - Equipment Request for new laptop (Low Priority)\n\nWould you like me to show details for any specific approval?';
+    }
+    
     // File search responses
     if (lowerQuery.includes('johnson') || lowerQuery.includes('smith')) {
       return 'I found the Johnson vs. Smith case! It\'s a contract dispute case that\'s currently active and being handled by Sarah Johnson. Last updated on June 10, 2024. Would you like me to show you more details?';
@@ -67,12 +77,14 @@ const ChatWidget = () => {
       return 'Currently you have 2 active files: Johnson vs. Smith Contract Dispute and Wilson Family Trust. Both need attention this week.';
     }
     
-    if (lowerQuery.includes('court') && lowerQuery.includes('files')) {
-      return 'Your court files include: Johnson vs. Smith Contract Dispute (Active) and Corporate Merger - TechCorp (Pending). The Johnson case has a hearing scheduled soon.';
+    // Team information
+    if (lowerQuery.includes('team') || lowerQuery.includes('staff') || lowerQuery.includes('who works')) {
+      return 'The MNA Africa team includes:\n• Sarah Johnson - Senior Associate\n• Michael Brown - Legal Counsel\n• Emily Davis - Paralegal\n• David Wilson - Junior Associate\n\nAll team members are currently active except Sarah who is on leave June 15-17.';
     }
     
-    if (lowerQuery.includes('tasks') && lowerQuery.includes('due')) {
-      return 'You have 3 tasks due this week: Client consultation preparation, court filing review, and contract analysis. The court filing review is high priority.';
+    // Client information
+    if (lowerQuery.includes('client') || lowerQuery.includes('techcorp')) {
+      return 'We have 4 active clients: TechCorp Industries, Global Investments Ltd, Estate Planning Solutions, and Manufacturing Co. TechCorp Industries has a new contract pending approval. Would you like details about any specific client?';
     }
     
     if (lowerQuery.includes('calendar') || lowerQuery.includes('schedule')) {
@@ -80,11 +92,11 @@ const ChatWidget = () => {
     }
     
     if (lowerQuery.includes('help') || lowerQuery.includes('what can you do')) {
-      return 'I can help you with:\n• Finding specific case files\n• Checking task deadlines\n• Viewing calendar events\n• Getting case status updates\n• Searching by client name or case type\n\nJust ask me naturally, like "Show me Peterson case" or "What tasks are due today?"';
+      return 'I can help you with:\n• Finding specific case files\n• Checking who is on leave\n• Showing pending approvals\n• Team member information\n• Client details\n• Task deadlines\n• Calendar events\n\nJust ask me naturally, like "Who is on leave?" or "Show me pending approvals"';
     }
     
     // Default response
-    return 'I\'m here to help you with the MNA system! You can ask me about specific cases, files, tasks, or schedules. Try asking something like "Show me active court files" or "What\'s due today?"';
+    return 'I\'m here to help you with the MNA Africa system! You can ask me about team members on leave, pending approvals, specific cases, files, or schedules. Try asking something like "Who is on leave?" or "Show me pending approvals"';
   };
 
   return (
@@ -93,7 +105,7 @@ const ChatWidget = () => {
       {!isOpen && (
         <Button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-mna-navy hover:bg-mna-navy/90 shadow-lg z-50"
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-mna-primary hover:bg-mna-primary/90 shadow-lg z-50"
           size="icon"
         >
           <MessageCircle size={24} />
@@ -103,8 +115,8 @@ const ChatWidget = () => {
       {/* Chat Widget */}
       {isOpen && (
         <Card className="fixed bottom-6 right-6 w-96 h-[500px] shadow-xl z-50 animate-scale-in">
-          <CardHeader className="flex flex-row items-center justify-between p-4 bg-mna-navy text-white rounded-t-lg">
-            <CardTitle className="text-lg">MNA Legal Assistant</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between p-4 bg-mna-primary text-white rounded-t-lg">
+            <CardTitle className="text-lg">MNA Africa Assistant</CardTitle>
             <Button
               onClick={() => setIsOpen(false)}
               variant="ghost"
@@ -130,7 +142,7 @@ const ChatWidget = () => {
                       className={cn(
                         "max-w-[80%] p-3 rounded-lg",
                         message.isUser
-                          ? "bg-mna-navy text-white"
+                          ? "bg-mna-primary text-white"
                           : "bg-gray-100 text-gray-900"
                       )}
                     >
@@ -151,13 +163,13 @@ const ChatWidget = () => {
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask about files, cases, or tasks..."
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mna-navy"
+                  placeholder="Ask about team, approvals, or files..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-mna-primary"
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="sm"
-                  className="bg-mna-navy hover:bg-mna-navy/90"
+                  className="bg-mna-primary hover:bg-mna-primary/90"
                 >
                   <Send size={16} />
                 </Button>

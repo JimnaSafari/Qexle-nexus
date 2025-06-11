@@ -3,7 +3,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* MNA Law Firm Design System */
+/* MNA Africa Design System */
 
 @layer base {
   :root {
@@ -16,50 +16,51 @@
     --popover: 0 0% 100%;
     --popover-foreground: 210 40% 8%;
 
-    /* MNA Navy Blue Primary */
-    --primary: 214 100% 19%;
+    /* MNA Africa Primary Blue */
+    --primary: 212 56% 16%;
     --primary-foreground: 0 0% 98%;
 
     /* Professional Greys */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 214 100% 19%;
+    --secondary: 0 0% 90%;
+    --secondary-foreground: 212 56% 16%;
 
-    --muted: 210 40% 96%;
+    --muted: 0 0% 90%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 214 100% 19%;
+    --accent: 0 0% 90%;
+    --accent-foreground: 212 56% 16%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 214 100% 19%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 212 56% 16%;
 
     --radius: 0.5rem;
 
-    /* MNA Custom Colors */
-    --mna-navy: 214 100% 19%;
-    --mna-light-blue: 210 100% 95%;
-    --mna-grey: 215 16% 47%;
+    /* MNA Africa Custom Colors */
+    --mna-primary: 212 56% 16%; /* #1B365D */
+    --mna-accent: 45 95% 58%; /* #FBC02D */
+    --mna-secondary: 0 0% 90%; /* #E5E5E5 */
+    --mna-background: 0 0% 100%; /* #FFFFFF */
     --mna-success: 142 76% 36%;
     --mna-warning: 38 92% 50%;
     --mna-danger: 0 84% 60%;
   }
 
   .dark {
-    --background: 214 100% 4%;
+    --background: 212 56% 4%;
     --foreground: 210 40% 98%;
 
-    --card: 214 100% 4%;
+    --card: 212 56% 4%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 214 100% 4%;
+    --popover: 212 56% 4%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
-    --primary-foreground: 214 100% 19%;
+    --primary-foreground: 212 56% 16%;
 
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;

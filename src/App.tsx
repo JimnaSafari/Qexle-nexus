@@ -10,7 +10,10 @@ import Tasks from "./pages/Tasks";
 import Calendar from "./pages/Calendar";
 import Files from "./pages/Files";
 import Leaves from "./pages/Leaves";
-import Employees from "./pages/Employees";
+import Team from "./pages/Team";
+import Clients from "./pages/Clients";
+import Invoices from "./pages/Invoices";
+import Approvals from "./pages/Approvals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,7 +31,10 @@ const App = () => (
             <Route path="calendar" element={<Calendar />} />
             <Route path="files" element={<Files />} />
             <Route path="leaves" element={<Leaves />} />
-            <Route path="employees" element={<Employees />} />
+            <Route path="team" element={<Team />} />
+            <Route path="clients" element={<Clients />} />
+            <Route path="invoices" element={<Invoices />} />
+            <Route path="approvals" element={<Approvals />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

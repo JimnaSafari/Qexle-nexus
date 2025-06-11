@@ -53,10 +53,11 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
-				// MNA Custom Colors
-				'mna-navy': 'hsl(var(--mna-navy))',
-				'mna-light-blue': 'hsl(var(--mna-light-blue))',
-				'mna-grey': 'hsl(var(--mna-grey))',
+				// MNA Africa Custom Colors
+				'mna-primary': 'hsl(var(--mna-primary))',
+				'mna-accent': 'hsl(var(--mna-accent))',
+				'mna-secondary': 'hsl(var(--mna-secondary))',
+				'mna-background': 'hsl(var(--mna-background))',
 				'mna-success': 'hsl(var(--mna-success))',
 				'mna-warning': 'hsl(var(--mna-warning))',
 				'mna-danger': 'hsl(var(--mna-danger))',

@@ -20,9 +20,9 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
       
       <div className="flex items-center space-x-4">
         <div className="text-sm text-muted-foreground">
-          Welcome back, Legal Team
+          Welcome back, MNA Africa Team
         </div>
-        <div className="w-8 h-8 bg-mna-navy rounded-full flex items-center justify-center text-white text-sm">
+        <div className="w-8 h-8 bg-mna-primary rounded-full flex items-center justify-center text-white text-sm">
           MNA
         </div>
       </div>

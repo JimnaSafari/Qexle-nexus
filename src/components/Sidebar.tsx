@@ -5,9 +5,12 @@ import {
   Calendar, 
   File, 
   Clock, 
-  List, 
+  List,
   Menu,
-  X
+  X,
+  Users,
+  UserCheck,
+  Receipt
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,13 +27,16 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
     { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Court Files', path: '/files', icon: File },
     { name: 'Leave Requests', path: '/leaves', icon: Clock },
-    { name: 'Employees', path: '/employees', icon: Menu },
+    { name: 'Team', path: '/team', icon: Users },
+    { name: 'Clients', path: '/clients', icon: UserCheck },
+    { name: 'Invoices', path: '/invoices', icon: Receipt },
+    { name: 'Approvals', path: '/approvals', icon: UserCheck },
   ];
 
   return (
     <>
       <div className={cn(
-        "fixed left-0 top-0 h-full bg-mna-navy text-white transition-all duration-300 z-40",
+        "fixed left-0 top-0 h-full bg-mna-primary text-white transition-all duration-300 z-40",
         isOpen ? "w-64" : "w-16"
       )}>
         <div className="p-4">
@@ -39,7 +45,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               "font-bold text-xl transition-opacity duration-300",
               isOpen ? "opacity-100" : "opacity-0"
             )}>
-              MNA Law Firm
+              MNA Africa
             </h1>
             <button
               onClick={() => setIsOpen(!isOpen)}
