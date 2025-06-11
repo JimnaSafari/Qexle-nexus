@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ChatWidget from './Chatbot/ChatWidget';
 
 const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -16,6 +17,7 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+      <ChatWidget />
     </div>
   );
 };
