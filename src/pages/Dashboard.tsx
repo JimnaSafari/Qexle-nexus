@@ -18,14 +18,14 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome to MNA Law Firm Management System</p>
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
+      <div className="text-center sm:text-left">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Welcome to MNA Law Firm Management System</p>
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <MetricCard
           title="Active Tasks"
           value={24}
@@ -57,21 +57,24 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
         <Card className="animate-scale-in">
-          <CardHeader>
-            <CardTitle>Recent Tasks</CardTitle>
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Recent Tasks</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
             {recentTasks.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="font-medium">{task.title}</p>
+              <div key={task.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-2 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm sm:text-base truncate pr-2">{task.title}</p>
                   <div className="flex items-center space-x-2 mt-1">
-                    <Badge variant={task.priority === 'High' ? 'destructive' : task.priority === 'Medium' ? 'default' : 'secondary'}>
+                    <Badge 
+                      variant={task.priority === 'High' ? 'destructive' : task.priority === 'Medium' ? 'default' : 'secondary'}
+                      className="text-xs"
+                    >
                       {task.priority}
                     </Badge>
-                    <Badge variant="outline">{task.status}</Badge>
+                    <Badge variant="outline" className="text-xs">{task.status}</Badge>
                   </div>
                 </div>
               </div>
@@ -80,15 +83,15 @@ const Dashboard = () => {
         </Card>
 
         <Card className="animate-scale-in">
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Upcoming Events</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
             {upcomingEvents.map((event) => (
-              <div key={event.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                <div>
-                  <p className="font-medium">{event.title}</p>
-                  <p className="text-sm text-muted-foreground">{event.time} - {event.date}</p>
+              <div key={event.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors space-y-1 sm:space-y-0">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm sm:text-base truncate pr-2">{event.title}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{event.time} - {event.date}</p>
                 </div>
               </div>
             ))}
