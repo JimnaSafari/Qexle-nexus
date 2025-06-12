@@ -9,12 +9,14 @@ const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
       <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
+      <div className={`transition-all duration-300 ease-in-out ${sidebarOpen ? 'ml-64' : 'ml-16'}`}>
         <Header toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="p-6">
-          <Outlet />
+        <main className="p-6 animate-fade-in">
+          <div className="page-transition">
+            <Outlet />
+          </div>
         </main>
       </div>
       <ChatWidget />
