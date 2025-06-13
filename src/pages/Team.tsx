@@ -66,7 +66,7 @@ const Team = () => {
     status: 'Active'
   });
 
-  const roles = ['Senior Associate', 'Legal Counsel', 'Intern', 'Junior Associate', 'Pupil'];
+  const roles = ['Senior Associate', 'Legal Counsel', 'Intern', 'Junior Associate', 'Pupil', 'Office Assistant'];
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -75,6 +75,7 @@ const Team = () => {
       case 'Intern': return 'outline';
       case 'Junior Associate': return 'secondary';
       case 'Pupil': return 'outline';
+      case 'Office Assistant': return 'outline';
       default: return 'outline';
     }
   };
