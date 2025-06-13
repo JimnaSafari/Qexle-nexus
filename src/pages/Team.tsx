@@ -41,7 +41,7 @@ const Team = () => {
     { 
       id: 3, 
       name: 'Emily Davis', 
-      role: 'Paralegal', 
+      role: 'Intern', 
       email: 'emily.davis@mnaafrica.co.ke',
       joinDate: '2023-01-10',
       status: 'Active'
@@ -66,14 +66,15 @@ const Team = () => {
     status: 'Active'
   });
 
-  const roles = ['Senior Associate', 'Legal Counsel', 'Paralegal', 'Junior Associate'];
+  const roles = ['Senior Associate', 'Legal Counsel', 'Intern', 'Junior Associate', 'Pupil'];
 
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'Senior Associate': return 'default';
       case 'Legal Counsel': return 'secondary';
-      case 'Paralegal': return 'outline';
+      case 'Intern': return 'outline';
       case 'Junior Associate': return 'secondary';
+      case 'Pupil': return 'outline';
       default: return 'outline';
     }
   };
