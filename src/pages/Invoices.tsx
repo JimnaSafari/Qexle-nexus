@@ -16,14 +16,14 @@ type Invoice = Database['public']['Tables']['invoices']['Row'] & {
     phone: string;
     company: string;
     address: string;
-  };
+  } | null;
   case: {
     title: string;
-  };
+  } | null;
   created_by_member: {
     first_name: string;
     last_name: string;
-  };
+  } | null;
 };
 
 const Invoices = () => {

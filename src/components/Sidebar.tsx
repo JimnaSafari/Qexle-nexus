@@ -20,10 +20,11 @@ import {
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
-  isCollapsed: boolean;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
 }
 
-const Sidebar = ({ isCollapsed }: SidebarProps) => {
+const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const location = useLocation();
   const [isLegalExcellenceOpen, setIsLegalExcellenceOpen] = useState(true);
 
@@ -108,7 +109,7 @@ const Sidebar = ({ isCollapsed }: SidebarProps) => {
       }
     >
       <Icon size={18} />
-      {!isCollapsed && <span>{label}</span>}
+      {!isOpen && <span>{label}</span>}
     </NavLink>
   );
 
@@ -117,7 +118,7 @@ const Sidebar = ({ isCollapsed }: SidebarProps) => {
       <div className="p-4">
         <div className="flex items-center gap-2 mb-6">
           <Scale className="h-8 w-8 text-mna-primary" />
-          {!isCollapsed && (
+          {!isOpen && (
             <div>
               <h1 className="text-xl font-bold text-foreground">MNA Africa</h1>
               <p className="text-xs text-muted-foreground">Law Firm</p>
@@ -149,7 +150,7 @@ const Sidebar = ({ isCollapsed }: SidebarProps) => {
               )}
             >
               <Gavel size={18} />
-              {!isCollapsed && (
+              {!isOpen && (
                 <>
                   <span className="flex-1 text-left">Legal Excellence</span>
                   {isLegalExcellenceOpen ? (
@@ -162,7 +163,7 @@ const Sidebar = ({ isCollapsed }: SidebarProps) => {
             </button>
 
             {/* Legal Excellence Submenu */}
-            {!isCollapsed && isLegalExcellenceOpen && (
+            {!isOpen && isLegalExcellenceOpen && (
               <div className="ml-6 mt-2 space-y-1">
                 {legalExcellenceItems.map((item) => (
                   <NavItem
