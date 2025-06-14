@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,7 +47,7 @@ export const CalendarEventForm = ({
   });
 
   // Initialize form when dialog opens
-  useState(() => {
+  useEffect(() => {
     if (editingEvent) {
       const startDate = new Date(editingEvent.start_time);
       const endDate = new Date(editingEvent.end_time);
