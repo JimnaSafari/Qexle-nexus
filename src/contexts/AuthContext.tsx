@@ -35,20 +35,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { user: supabaseUser } } = await supabase.auth.getUser();
         
         if (supabaseUser) {
+          console.log('Found authenticated user:', supabaseUser.email);
+          
           // Get user profile from team_members table
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('team_members')
             .select('*')
             .eq('email', supabaseUser.email)
             .maybeSingle();
           
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          }
+          
           if (profile) {
+            console.log('Found user profile:', profile);
             setUser({
               id: supabaseUser.id,
               email: supabaseUser.email!,
               name: `${profile.first_name} ${profile.last_name}`,
               role: profile.role
             });
+          } else {
+            console.log('No profile found for user');
           }
         }
       } catch (error) {
@@ -62,13 +71,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
       try {
         if (event === 'SIGNED_IN' && session?.user) {
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('team_members')
             .select('*')
             .eq('email', session.user.email)
             .maybeSingle();
+          
+          if (profileError) {
+            console.error('Error fetching profile after sign in:', profileError);
+          }
           
           if (profile) {
             setUser({
@@ -100,14 +115,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (authError) {
+        console.log('Sign in failed, attempting to create account:', authError.message);
+        
         // If user doesn't exist, try to sign them up
         if (authError.message.includes('Invalid login credentials')) {
-          console.log('User not found, attempting to create account...');
-          
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
             options: {
+              emailRedirectTo: `${window.location.origin}/`,
               data: {
                 first_name: firstName,
                 last_name: lastName,
@@ -117,10 +133,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
 
           if (signUpError) {
+            console.error('Sign up error:', signUpError);
             throw new Error(signUpError.message);
           }
 
           if (signUpData.user) {
+            console.log('User created successfully');
+            
             // Create team member record
             const { error: teamMemberError } = await supabase
               .from('team_members')
@@ -134,9 +153,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (teamMemberError) {
               console.error('Error creating team member:', teamMemberError);
+              throw new Error('Failed to create user profile');
             }
 
-            // Set user immediately
+            // Set user immediately for new signups
             setUser({
               id: signUpData.user.id,
               email: email,
@@ -150,12 +170,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (authData.user) {
+        console.log('User signed in successfully');
+        
         // Check if team member exists, if not create one
-        let { data: teamMember } = await supabase
+        let { data: teamMember, error: fetchError } = await supabase
           .from('team_members')
           .select('*')
           .eq('email', email)
           .maybeSingle();
+
+        if (fetchError) {
+          console.error('Error fetching team member:', fetchError);
+          throw new Error('Failed to fetch user profile');
+        }
 
         if (!teamMember) {
           console.log('Creating team member record...');
@@ -177,7 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           teamMember = newTeamMember;
         } else {
-          // Update existing team member with new names and role if provided
+          // Update existing team member with new information
           const { data: updatedMember, error: updateError } = await supabase
             .from('team_members')
             .update({ 

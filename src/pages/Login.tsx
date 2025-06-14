@@ -40,6 +40,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Starting login process...');
       await login(formData.email, formData.password, formData.role, formData.firstName, formData.lastName);
       
       toast({
@@ -48,12 +49,13 @@ const Login = () => {
       });
       
       // Redirect to dashboard
+      console.log('Login successful, redirecting...');
       window.location.href = '/';
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error.message || "Login failed. Please check your credentials.",
+        description: error.message || "Login failed. Please check your credentials and try again.",
         variant: "destructive",
       });
     } finally {
