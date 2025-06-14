@@ -1,184 +1,114 @@
-import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  Calendar, 
-  CheckSquare, 
-  UserCheck, 
-  FileCheck, 
-  DollarSign,
-  ChevronDown,
-  ChevronRight,
-  Scale,
-  UserPlus,
-  ClipboardList,
-  CalendarDays,
-  Gavel
-} from 'lucide-react';
+
+import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { 
+  Calendar, 
+  File, 
+  Clock, 
+  List,
+  Menu,
+  X,
+  Users,
+  UserCheck,
+  Receipt,
+  Home
+} from 'lucide-react';
 
 interface SidebarProps {
-  isCollapsed: boolean;
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
 }
 
-const Sidebar = ({ isCollapsed }: SidebarProps) => {
+const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const location = useLocation();
-  const [isLegalExcellenceOpen, setIsLegalExcellenceOpen] = useState(true);
 
-  const mainNavItems = [
-    { 
-      icon: LayoutDashboard, 
-      label: 'Dashboard', 
-      path: '/' 
-    },
-    { 
-      icon: Users, 
-      label: 'Team', 
-      path: '/team' 
-    },
-    { 
-      icon: UserPlus, 
-      label: 'Clients', 
-      path: '/clients' 
-    },
+  const menuItems = [
+    { name: 'Dashboard', path: '/', icon: Home },
+    { name: 'Tasks', path: '/tasks', icon: List },
+    { name: 'Calendar', path: '/calendar', icon: Calendar },
+    { name: 'Court Files', path: '/files', icon: File },
+    { name: 'Leave Requests', path: '/leaves', icon: Clock },
+    { name: 'Team', path: '/team', icon: Users },
+    { name: 'Clients', path: '/clients', icon: UserCheck },
+    { name: 'Invoices', path: '/invoices', icon: Receipt },
+    { name: 'Approvals', path: '/approvals', icon: UserCheck },
   ];
-
-  const legalExcellenceItems = [
-    { 
-      icon: ClipboardList, 
-      label: 'Tasks', 
-      path: '/tasks' 
-    },
-    { 
-      icon: CalendarDays, 
-      label: 'Calendar', 
-      path: '/calendar' 
-    },
-    { 
-      icon: FileText, 
-      label: 'Files', 
-      path: '/files' 
-    },
-    { 
-      icon: CheckSquare, 
-      label: 'Leaves', 
-      path: '/leaves' 
-    },
-    { 
-      icon: UserCheck, 
-      label: 'Approvals', 
-      path: '/approvals' 
-    },
-    { 
-      icon: DollarSign, 
-      label: 'Invoices', 
-      path: '/invoices' 
-    },
-  ];
-
-  // Check if current path is within Legal Excellence section
-  const isInLegalExcellence = legalExcellenceItems.some(item => location.pathname === item.path);
-  
-  // Keep Legal Excellence section open if we're on one of its pages
-  React.useEffect(() => {
-    if (isInLegalExcellence) {
-      setIsLegalExcellenceOpen(true);
-    }
-  }, [isInLegalExcellence]);
-
-  const NavItem = ({ icon: Icon, label, path, className = "" }: { 
-    icon: React.ElementType; 
-    label: string; 
-    path: string; 
-    className?: string;
-  }) => (
-    <NavLink
-      to={path}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-          "hover:bg-mna-accent hover:text-mna-primary",
-          isActive 
-            ? "bg-mna-accent text-mna-primary" 
-            : "text-muted-foreground",
-          className
-        )
-      }
-    >
-      <Icon size={18} />
-      {!isCollapsed && <span>{label}</span>}
-    </NavLink>
-  );
 
   return (
-    <div className="h-full bg-card border-r border-border">
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-6">
-          <Scale className="h-8 w-8 text-mna-primary" />
-          {!isCollapsed && (
-            <div>
-              <h1 className="text-xl font-bold text-foreground">MNA Africa</h1>
-              <p className="text-xs text-muted-foreground">Law Firm</p>
-            </div>
-          )}
-        </div>
-
-        <nav className="space-y-2">
-          {/* Main Navigation Items */}
-          {mainNavItems.map((item) => (
-            <NavItem
-              key={item.path}
-              icon={item.icon}
-              label={item.label}
-              path={item.path}
-            />
-          ))}
-
-          {/* Legal Excellence Section */}
-          <div className="mt-6">
+    <>
+      <div className={cn(
+        "fixed left-0 top-0 h-full bg-gradient-to-b from-mna-primary to-mna-primary/90 text-white transition-all duration-500 ease-in-out z-40 shadow-2xl",
+        isOpen ? "w-64" : "w-16"
+      )}>
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-8 animate-slide-down">
+            <h1 className={cn(
+              "font-bold text-xl transition-all duration-300 ease-in-out",
+              isOpen ? "opacity-100 transform translate-x-0" : "opacity-0 transform -translate-x-4"
+            )}>
+              MNA Africa
+            </h1>
             <button
-              onClick={() => setIsLegalExcellenceOpen(!isLegalExcellenceOpen)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full",
-                "hover:bg-mna-accent hover:text-mna-primary",
-                (isLegalExcellenceOpen || isInLegalExcellence)
-                  ? "bg-mna-accent text-mna-primary" 
-                  : "text-muted-foreground"
-              )}
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 rounded-lg hover:bg-white/10 transition-all duration-200 hover:scale-110 micro-bounce"
             >
-              <Gavel size={18} />
-              {!isCollapsed && (
-                <>
-                  <span className="flex-1 text-left">Legal Excellence</span>
-                  {isLegalExcellenceOpen ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
-                </>
-              )}
+              {isOpen ? <X size={20} className="transition-transform duration-200" /> : <Menu size={20} className="transition-transform duration-200" />}
             </button>
-
-            {/* Legal Excellence Submenu */}
-            {!isCollapsed && isLegalExcellenceOpen && (
-              <div className="ml-6 mt-2 space-y-1">
-                {legalExcellenceItems.map((item) => (
-                  <NavItem
-                    key={item.path}
-                    icon={item.icon}
-                    label={item.label}
-                    path={item.path}
-                    className="text-xs"
-                  />
-                ))}
-              </div>
-            )}
           </div>
-        </nav>
+
+          <nav className="space-y-2">
+            {menuItems.map((item, index) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "flex items-center p-3 rounded-xl transition-all duration-300 ease-in-out hover:bg-white/10 hover-lift group animate-slide-in-left",
+                    isActive && "bg-white/20 shadow-lg transform scale-105",
+                    "hover:scale-105"
+                  )}
+                  style={{
+                    animationDelay: `${index * 0.1}s`
+                  }}
+                >
+                  <Icon 
+                    size={20} 
+                    className={cn(
+                      "transition-all duration-200 group-hover:scale-110",
+                      isActive && "text-mna-accent"
+                    )}
+                  />
+                  <span className={cn(
+                    "ml-3 transition-all duration-300 ease-in-out font-medium",
+                    isOpen ? "opacity-100 transform translate-x-0" : "opacity-0 transform -translate-x-4",
+                    isActive && "text-mna-accent"
+                  )}>
+                    {item.name}
+                  </span>
+                  {isActive && (
+                    <div className="absolute right-0 w-1 h-8 bg-mna-accent rounded-l-full animate-scale-in" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+          
+          {/* Animated brand element */}
+          <div className={cn(
+            "absolute bottom-6 left-4 right-4 transition-all duration-300",
+            isOpen ? "opacity-100" : "opacity-0"
+          )}>
+            <div className="text-center p-4 bg-white/10 rounded-xl backdrop-blur-sm animate-float">
+              <div className="w-8 h-8 bg-mna-accent rounded-full mx-auto mb-2 animate-pulse-slow"></div>
+              <p className="text-xs text-white/80">Legal Excellence</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

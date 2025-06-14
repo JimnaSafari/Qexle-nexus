@@ -8,20 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Check, X, Download } from 'lucide-react';
+import { Plus, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { generateLeaveRequestPDF } from '@/utils/pdfGenerator';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'] & {
   team_member: {
     first_name: string;
     last_name: string;
-    email: string;
-    department: string;
   };
   approved_by_member?: {
     first_name: string;
@@ -36,7 +32,7 @@ const Leaves = () => {
   const { isSeniorAssociate } = useAuth();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     team_member_id: '',
@@ -45,44 +41,21 @@ const Leaves = () => {
     reason: ''
   });
 
-  // Fetch team members
-  const fetchTeamMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .order('first_name');
+  const leaveTypes = ['Annual Leave', 'Sick Leave', 'Personal Leave', 'Maternity Leave', 'Emergency Leave'];
 
-      if (error) throw error;
-      setTeamMembers(data || []);
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch team members",
-        variant: "destructive",
-      });
-    }
-  };
+  useEffect(() => {
+    fetchLeaveRequests();
+    fetchTeamMembers();
+  }, []);
 
-  // Fetch leave requests with team member details
   const fetchLeaveRequests = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('leave_requests')
         .select(`
           *,
-          team_member:team_members!leave_requests_team_member_id_fkey(
-            first_name,
-            last_name,
-            email,
-            department
-          ),
-          approved_by_member:team_members!leave_requests_approved_by_fkey(
-            first_name,
-            last_name
-          )
+          team_member:team_members!team_member_id(first_name, last_name),
+          approved_by_member:team_members!approved_by(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -100,30 +73,19 @@ const Leaves = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTeamMembers();
-    fetchLeaveRequests();
+  const fetchTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .order('first_name');
 
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('leave-requests-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'leave_requests'
-        },
-        () => {
-          fetchLeaveRequests();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      if (error) throw error;
+      setTeamMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -153,23 +115,21 @@ const Leaves = () => {
       return;
     }
 
-    setLoading(true);
     try {
       const { error } = await supabase
         .from('leave_requests')
-        .insert({
+        .insert([{
           team_member_id: formData.team_member_id,
           start_date: formData.start_date,
           end_date: formData.end_date,
-          reason: formData.reason,
-          status: 'pending'
-        });
+          reason: formData.reason
+        }]);
 
       if (error) throw error;
 
       setFormData({ team_member_id: '', start_date: '', end_date: '', reason: '' });
       setIsDialogOpen(false);
-      
+      fetchLeaveRequests();
       toast({
         title: "Success",
         description: "Leave request submitted successfully",
@@ -181,8 +141,6 @@ const Leaves = () => {
         description: "Failed to submit leave request",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -197,16 +155,24 @@ const Leaves = () => {
     }
 
     try {
+      const { data: currentUser } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
       const { error } = await supabase
         .from('leave_requests')
         .update({ 
           status: 'approved',
+          approved_by: currentUser?.id,
           approved_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (error) throw error;
 
+      fetchLeaveRequests();
       toast({
         title: "Success",
         description: "Leave request approved",
@@ -232,16 +198,24 @@ const Leaves = () => {
     }
 
     try {
+      const { data: currentUser } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
       const { error } = await supabase
         .from('leave_requests')
         .update({ 
           status: 'rejected',
+          approved_by: currentUser?.id,
           approved_at: new Date().toISOString()
         })
         .eq('id', id);
 
       if (error) throw error;
 
+      fetchLeaveRequests();
       toast({
         title: "Success",
         description: "Leave request rejected",
@@ -256,13 +230,9 @@ const Leaves = () => {
     }
   };
 
-  const handleDownloadPDF = (request: LeaveRequest) => {
-    generateLeaveRequestPDF(request);
-    toast({
-      title: "Download Started",
-      description: "Leave request document is being downloaded",
-    });
-  };
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -292,7 +262,7 @@ const Leaves = () => {
                   <SelectContent>
                     {teamMembers.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.first_name} {member.last_name} - {member.role}
+                        {member.first_name} {member.last_name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -329,8 +299,8 @@ const Leaves = () => {
                 />
               </div>
               <div className="flex space-x-2">
-                <Button onClick={handleAddRequest} disabled={loading} className="flex-1">
-                  {loading ? 'Submitting...' : 'Submit Request'}
+                <Button onClick={handleAddRequest} className="flex-1">
+                  Submit Request
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -341,103 +311,7 @@ const Leaves = () => {
         </Dialog>
       </div>
 
-      {/* Table View */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Leave Requests Overview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-4">Loading leave requests...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leaveRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div>{request.team_member?.first_name} {request.team_member?.last_name}</div>
-                        <div className="text-sm text-muted-foreground">{request.team_member?.department}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>From: {new Date(request.start_date).toLocaleDateString()}</div>
-                        <div>To: {new Date(request.end_date).toLocaleDateString()}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-xs truncate" title={request.reason}>
-                        {request.reason}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={`border-${getStatusColor(request.status || 'pending')} text-${getStatusColor(request.status || 'pending')}`}
-                      >
-                        {request.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDownloadPDF(request)}
-                        >
-                          <Download size={16} className="mr-1" />
-                          PDF
-                        </Button>
-                        {request.status === 'pending' && isSeniorAssociate && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleApprove(request.id)}
-                              className="bg-mna-success hover:bg-mna-success/90 text-white"
-                            >
-                              <Check size={16} className="mr-1" />
-                              Approve
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => handleReject(request.id)}
-                              className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white"
-                            >
-                              <X size={16} className="mr-1" />
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {leaveRequests.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4">
-                      No leave requests found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Card View for Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {leaveRequests.map((request) => (
           <Card key={request.id} className="hover:shadow-lg transition-all duration-200 hover:scale-105 animate-scale-in">
             <CardHeader>
@@ -455,38 +329,23 @@ const Leaves = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Department:</span>
-                <span className="text-sm font-medium">{request.team_member?.department}</span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Start Date:</span>
-                <span className="text-sm font-medium">{new Date(request.start_date).toLocaleDateString()}</span>
+                <span className="text-sm font-medium">{request.start_date}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">End Date:</span>
-                <span className="text-sm font-medium">{new Date(request.end_date).toLocaleDateString()}</span>
+                <span className="text-sm font-medium">{request.end_date}</span>
               </div>
               <div className="pt-2">
                 <span className="text-sm text-muted-foreground">Reason:</span>
                 <p className="text-sm mt-1">{request.reason}</p>
-              </div>
-              <div className="flex space-x-2 pt-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => handleDownloadPDF(request)}
-                  className="flex-1"
-                >
-                  <Download size={16} className="mr-1" />
-                  Download PDF
-                </Button>
               </div>
               {request.status === 'pending' && isSeniorAssociate && (
                 <div className="flex space-x-2 pt-2">
                   <Button 
                     size="sm" 
                     onClick={() => handleApprove(request.id)}
-                    className="bg-mna-success hover:bg-mna-success/90 text-white flex-1"
+                    className="bg-mna-success hover:bg-mna-success/90 text-white"
                   >
                     <Check size={16} className="mr-1" />
                     Approve
@@ -495,7 +354,7 @@ const Leaves = () => {
                     size="sm" 
                     variant="outline" 
                     onClick={() => handleReject(request.id)}
-                    className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white flex-1"
+                    className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white"
                   >
                     <X size={16} className="mr-1" />
                     Reject

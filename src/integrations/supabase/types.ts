@@ -336,27 +336,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_invoices_case"
-            columns: ["case_id"]
-            isOneToOne: false
-            referencedRelation: "cases"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_invoices_client"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_invoices_created_by"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "team_members"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "invoices_case_id_fkey"
             columns: ["case_id"]
             isOneToOne: false
@@ -417,20 +396,6 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "fk_leave_requests_approved_by"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "team_members"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_leave_requests_team_member"
-            columns: ["team_member_id"]
-            isOneToOne: false
-            referencedRelation: "team_members"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "leave_requests_approved_by_fkey"
             columns: ["approved_by"]
