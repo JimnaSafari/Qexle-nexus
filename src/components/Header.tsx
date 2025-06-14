@@ -2,6 +2,9 @@
 import { Menu, Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/contexts/AuthContext';
+import { useAutoLogout } from '@/hooks/useAutoLogout';
+import LogoutButton from './LogoutButton';
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -9,6 +12,10 @@ interface HeaderProps {
 
 const Header = ({ toggleSidebar }: HeaderProps) => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  
+  // Enable auto-logout functionality
+  useAutoLogout();
 
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-border/50 p-3 sm:p-4 flex items-center justify-between shadow-sm animate-slide-down">
@@ -62,20 +69,27 @@ const Header = ({ toggleSidebar }: HeaderProps) => {
         </Button>
         
         {/* Welcome message - hidden on very small screens */}
-        {!isMobile && (
+        {!isMobile && user && (
           <div className="hidden sm:block text-sm text-muted-foreground animate-fade-in animate-stagger-2">
-            Welcome back, MNA Africa Team
+            Welcome back, {user.name}
           </div>
         )}
         
         {/* Profile avatar */}
         <div className="relative group">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-mna-primary to-mna-primary/80 rounded-full flex items-center justify-center text-white text-xs sm:text-sm font-semibold shadow-lg hover-lift cursor-pointer animate-scale-in animate-stagger-3">
-            MNA
+            {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'MNA'}
             <div className="absolute inset-0 bg-gradient-to-br from-mna-accent/20 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
           <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-mna-success rounded-full border-2 border-white animate-bounce-in"></div>
         </div>
+
+        {/* Logout button */}
+        <LogoutButton 
+          variant="ghost" 
+          size="sm" 
+          showText={!isMobile}
+        />
       </div>
     </header>
   );
