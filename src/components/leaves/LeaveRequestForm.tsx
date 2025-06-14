@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Calendar, User } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Plus, Calendar, User, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { calculateDays } from '@/utils/leaveUtils';
@@ -25,11 +26,13 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
     reason: ''
   });
 
+  console.log('LeaveRequestForm debug:', { currentUserTeamMember, submitting, isDialogOpen });
+
   const handleSubmitRequest = async () => {
     if (!currentUserTeamMember) {
       toast({
         title: "Error",
-        description: "User profile not found",
+        description: "User profile not found. Please refresh the page and try again.",
         variant: "destructive",
       });
       return;
@@ -55,6 +58,11 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
 
     try {
       setSubmitting(true);
+      console.log('Submitting leave request:', { 
+        team_member_id: currentUserTeamMember.id, 
+        ...formData 
+      });
+
       const { error } = await supabase
         .from('leave_requests')
         .insert({
@@ -69,7 +77,7 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
         console.error('Error submitting leave request:', error);
         toast({
           title: "Error",
-          description: "Failed to submit leave request",
+          description: `Failed to submit leave request: ${error.message}`,
           variant: "destructive",
         });
         return;
@@ -94,14 +102,19 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
     }
   };
 
-  if (!currentUserTeamMember) return null;
+  // Always show the button, but with different states
+  const buttonDisabled = !currentUserTeamMember;
+  const buttonText = currentUserTeamMember ? "Apply for Leave" : "Loading Profile...";
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-mna-navy hover:bg-mna-navy/90">
+        <Button 
+          className="bg-mna-navy hover:bg-mna-navy/90"
+          disabled={buttonDisabled}
+        >
           <Plus size={16} className="mr-2" />
-          Apply for Leave
+          {buttonText}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
@@ -109,70 +122,81 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
           <DialogTitle>Apply for Leave</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
-            <User size={16} className="text-muted-foreground" />
-            <span className="font-medium">
-              {currentUserTeamMember.first_name} {currentUserTeamMember.last_name}
-            </span>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="start_date">Start Date</Label>
-              <Input
-                id="start_date"
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => setFormData({...formData, start_date: e.target.value})}
-                min={new Date().toISOString().split('T')[0]}
-              />
-            </div>
-            <div>
-              <Label htmlFor="end_date">End Date</Label>
-              <Input
-                id="end_date"
-                type="date"
-                value={formData.end_date}
-                onChange={(e) => setFormData({...formData, end_date: e.target.value})}
-                min={formData.start_date || new Date().toISOString().split('T')[0]}
-              />
-            </div>
-          </div>
-          
-          {formData.start_date && formData.end_date && (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Calendar size={16} />
-              <span>Duration: {calculateDays(formData.start_date, formData.end_date)} day(s)</span>
-            </div>
+          {!currentUserTeamMember ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Unable to load your profile. Please refresh the page and try again.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                <User size={16} className="text-muted-foreground" />
+                <span className="font-medium">
+                  {currentUserTeamMember.first_name} {currentUserTeamMember.last_name}
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_date">Start Date</Label>
+                  <Input
+                    id="start_date"
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end_date">End Date</Label>
+                  <Input
+                    id="end_date"
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+                    min={formData.start_date || new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+              
+              {formData.start_date && formData.end_date && (
+                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                  <Calendar size={16} />
+                  <span>Duration: {calculateDays(formData.start_date, formData.end_date)} day(s)</span>
+                </div>
+              )}
+              
+              <div>
+                <Label htmlFor="reason">Reason for Leave</Label>
+                <Textarea
+                  id="reason"
+                  value={formData.reason}
+                  onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                  placeholder="Please provide a detailed reason for your leave request..."
+                  className="h-24"
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={handleSubmitRequest} 
+                  className="flex-1"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Application'}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </>
           )}
-          
-          <div>
-            <Label htmlFor="reason">Reason for Leave</Label>
-            <Textarea
-              id="reason"
-              value={formData.reason}
-              onChange={(e) => setFormData({...formData, reason: e.target.value})}
-              placeholder="Please provide a detailed reason for your leave request..."
-              className="h-24"
-            />
-          </div>
-          
-          <div className="flex space-x-2">
-            <Button 
-              onClick={handleSubmitRequest} 
-              className="flex-1"
-              disabled={submitting}
-            >
-              {submitting ? 'Submitting...' : 'Submit Application'}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDialogOpen(false)}
-              disabled={submitting}
-            >
-              Cancel
-            </Button>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

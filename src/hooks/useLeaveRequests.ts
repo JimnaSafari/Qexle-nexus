@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,9 +28,14 @@ export const useLeaveRequests = () => {
   // Fetch current user's team member record
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      if (!user) return;
+      if (!user) {
+        console.log('No user found, skipping team member fetch');
+        setLoading(false);
+        return;
+      }
       
       try {
+        console.log('Fetching team member for user:', user.id);
         const { data, error } = await supabase
           .from('team_members')
           .select('*')
@@ -40,17 +44,28 @@ export const useLeaveRequests = () => {
         
         if (error) {
           console.error('Error fetching current user:', error);
+          toast({
+            title: "Profile Error",
+            description: "Unable to load your profile. Some features may not work properly.",
+            variant: "destructive",
+          });
           return;
         }
         
+        console.log('Found team member:', data);
         setCurrentUserTeamMember(data);
       } catch (error) {
         console.error('Error:', error);
+        toast({
+          title: "Profile Error",
+          description: "Unable to load your profile. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
 
     fetchCurrentUser();
-  }, [user]);
+  }, [user, toast]);
 
   // Fetch leave requests with corrected relationship names
   const fetchLeaveRequests = async () => {

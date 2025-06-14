@@ -5,9 +5,11 @@ import { LeaveRequestForm } from '@/components/leaves/LeaveRequestForm';
 import { LeaveStatistics } from '@/components/leaves/LeaveStatistics';
 import { LeaveTableView } from '@/components/leaves/LeaveTableView';
 import { LeaveMobileView } from '@/components/leaves/LeaveMobileView';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, User } from 'lucide-react';
 
 const Leaves = () => {
-  const { isSeniorAssociate } = useAuth();
+  const { isSeniorAssociate, user, isAuthenticated } = useAuth();
   const { 
     leaveRequests, 
     currentUserTeamMember, 
@@ -15,6 +17,14 @@ const Leaves = () => {
     handleApprove, 
     handleReject 
   } = useLeaveRequests();
+
+  console.log('Leaves page debug:', {
+    isAuthenticated,
+    user: user ? { id: user.id, name: user.name, role: user.role } : null,
+    currentUserTeamMember,
+    isSeniorAssociate,
+    loading
+  });
 
   if (loading) {
     return (
@@ -24,6 +34,17 @@ const Leaves = () => {
           <p className="text-muted-foreground">Loading leave requests...</p>
         </div>
       </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          You need to be logged in to access leave requests.
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -38,9 +59,32 @@ const Leaves = () => {
               : "View your leave requests and submit new applications"
             }
           </p>
+          {user && (
+            <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+              <User size={16} />
+              Logged in as: {user.name} ({user.role})
+            </div>
+          )}
         </div>
         
-        <LeaveRequestForm currentUserTeamMember={currentUserTeamMember} />
+        <div className="flex flex-col items-end gap-2">
+          {!currentUserTeamMember && !loading && (
+            <Alert className="max-w-sm">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Unable to load your profile. The Apply for Leave button may not work properly.
+              </AlertDescription>
+            </Alert>
+          )}
+          
+          <LeaveRequestForm currentUserTeamMember={currentUserTeamMember} />
+          
+          {currentUserTeamMember && (
+            <div className="text-xs text-muted-foreground">
+              Profile: {currentUserTeamMember.first_name} {currentUserTeamMember.last_name}
+            </div>
+          )}
+        </div>
       </div>
 
       <LeaveStatistics leaveRequests={leaveRequests} />
