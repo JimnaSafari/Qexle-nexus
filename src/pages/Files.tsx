@@ -13,16 +13,6 @@ import { CaseFile, DownloadProgress as DownloadProgressType } from '@/types/file
 import EnhancedDownloadDialog from '@/components/EnhancedDownloadDialog';
 import DownloadProgress from '@/components/DownloadProgress';
 
-interface CaseFile {
-  id: number;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  uploadedBy: string;
-  caseNumber: string;
-}
-
 const Files = () => {
   const { toast } = useToast();
   const { isSeniorAssociate } = useAuth();
