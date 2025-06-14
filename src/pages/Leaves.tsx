@@ -38,7 +38,6 @@ const Leaves = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState({
     team_member_id: '',
     start_date: '',
@@ -154,7 +153,7 @@ const Leaves = () => {
       return;
     }
 
-    setFormLoading(true);
+    setLoading(true);
     try {
       const { error } = await supabase
         .from('leave_requests')
@@ -170,7 +169,6 @@ const Leaves = () => {
 
       setFormData({ team_member_id: '', start_date: '', end_date: '', reason: '' });
       setIsDialogOpen(false);
-      fetchLeaveRequests();
       
       toast({
         title: "Success",
@@ -184,11 +182,11 @@ const Leaves = () => {
         variant: "destructive",
       });
     } finally {
-      setFormLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleApprove = async (requestId: string) => {
+  const handleApprove = async (id: string) => {
     if (!isSeniorAssociate) {
       toast({
         title: "Access Denied",
@@ -205,11 +203,10 @@ const Leaves = () => {
           status: 'approved',
           approved_at: new Date().toISOString()
         })
-        .eq('id', requestId);
+        .eq('id', id);
 
       if (error) throw error;
 
-      fetchLeaveRequests();
       toast({
         title: "Success",
         description: "Leave request approved",
@@ -224,7 +221,7 @@ const Leaves = () => {
     }
   };
 
-  const handleReject = async (requestId: string) => {
+  const handleReject = async (id: string) => {
     if (!isSeniorAssociate) {
       toast({
         title: "Access Denied",
@@ -241,11 +238,10 @@ const Leaves = () => {
           status: 'rejected',
           approved_at: new Date().toISOString()
         })
-        .eq('id', requestId);
+        .eq('id', id);
 
       if (error) throw error;
 
-      fetchLeaveRequests();
       toast({
         title: "Success",
         description: "Leave request rejected",
@@ -333,8 +329,8 @@ const Leaves = () => {
                 />
               </div>
               <div className="flex space-x-2">
-                <Button onClick={handleAddRequest} disabled={formLoading} className="flex-1">
-                  {formLoading ? 'Submitting...' : 'Submit Request'}
+                <Button onClick={handleAddRequest} disabled={loading} className="flex-1">
+                  {loading ? 'Submitting...' : 'Submit Request'}
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -479,32 +475,33 @@ const Leaves = () => {
                   size="sm" 
                   variant="outline"
                   onClick={() => handleDownloadPDF(request)}
+                  className="flex-1"
                 >
                   <Download size={16} className="mr-1" />
-                  PDF
+                  Download PDF
                 </Button>
-                {request.status === 'pending' && isSeniorAssociate && (
-                  <>
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleApprove(request.id)}
-                      className="bg-mna-success hover:bg-mna-success/90 text-white"
-                    >
-                      <Check size={16} className="mr-1" />
-                      Approve
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => handleReject(request.id)}
-                      className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white"
-                    >
-                      <X size={16} className="mr-1" />
-                      Reject
-                    </Button>
-                  </>
-                )}
               </div>
+              {request.status === 'pending' && isSeniorAssociate && (
+                <div className="flex space-x-2 pt-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleApprove(request.id)}
+                    className="bg-mna-success hover:bg-mna-success/90 text-white flex-1"
+                  >
+                    <Check size={16} className="mr-1" />
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => handleReject(request.id)}
+                    className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white flex-1"
+                  >
+                    <X size={16} className="mr-1" />
+                    Reject
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

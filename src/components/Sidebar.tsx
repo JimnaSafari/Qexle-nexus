@@ -20,11 +20,10 @@ import {
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  isCollapsed: boolean;
 }
 
-const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
+const Sidebar = ({ isCollapsed }: SidebarProps) => {
   const location = useLocation();
   const [isLegalExcellenceOpen, setIsLegalExcellenceOpen] = useState(true);
 
@@ -109,7 +108,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
       }
     >
       <Icon size={18} />
-      {!isOpen && <span>{label}</span>}
+      {!isCollapsed && <span>{label}</span>}
     </NavLink>
   );
 
@@ -118,7 +117,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
       <div className="p-4">
         <div className="flex items-center gap-2 mb-6">
           <Scale className="h-8 w-8 text-mna-primary" />
-          {!isOpen && (
+          {!isCollapsed && (
             <div>
               <h1 className="text-xl font-bold text-foreground">MNA Africa</h1>
               <p className="text-xs text-muted-foreground">Law Firm</p>
@@ -144,11 +143,13 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full",
                 "hover:bg-mna-accent hover:text-mna-primary",
-                "text-muted-foreground"
+                (isLegalExcellenceOpen || isInLegalExcellence)
+                  ? "bg-mna-accent text-mna-primary" 
+                  : "text-muted-foreground"
               )}
             >
               <Gavel size={18} />
-              {!isOpen && (
+              {!isCollapsed && (
                 <>
                   <span className="flex-1 text-left">Legal Excellence</span>
                   {isLegalExcellenceOpen ? (
@@ -160,8 +161,8 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               )}
             </button>
 
-            {/* Legal Excellence Submenu - Always visible when not collapsed and section is open */}
-            {!isOpen && isLegalExcellenceOpen && (
+            {/* Legal Excellence Submenu */}
+            {!isCollapsed && isLegalExcellenceOpen && (
               <div className="ml-6 mt-2 space-y-1">
                 {legalExcellenceItems.map((item) => (
                   <NavItem

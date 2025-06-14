@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,9 +10,20 @@ import { generateInvoicePDF } from '@/utils/pdfGenerator';
 import type { Database } from '@/integrations/supabase/types';
 
 type Invoice = Database['public']['Tables']['invoices']['Row'] & {
-  client: Database['public']['Tables']['clients']['Row'] | null;
-  case: Database['public']['Tables']['cases']['Row'] | null;
-  created_by_member: Database['public']['Tables']['team_members']['Row'] | null;
+  client: {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    address: string;
+  };
+  case: {
+    title: string;
+  };
+  created_by_member: {
+    first_name: string;
+    last_name: string;
+  };
 };
 
 const Invoices = () => {
@@ -27,14 +39,19 @@ const Invoices = () => {
         .from('invoices')
         .select(`
           *,
-          client:clients!invoices_client_id_fkey(
-            *
+          client:clients(
+            name,
+            email,
+            phone,
+            company,
+            address
           ),
-          case:cases!invoices_case_id_fkey(
-            *
+          case:cases(
+            title
           ),
           created_by_member:team_members!invoices_created_by_fkey(
-            *
+            first_name,
+            last_name
           )
         `)
         .order('created_at', { ascending: false });
