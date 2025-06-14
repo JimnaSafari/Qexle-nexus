@@ -15,7 +15,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => Promise<void>;
+  login: (email: string, password: string, role: UserRole, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isSeniorAssociate: boolean;
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, role: UserRole) => {
+  const login = async (email: string, password: string, role: UserRole, firstName: string = 'User', lastName: string = 'Name') => {
     try {
       console.log('Attempting login for:', email, 'with role:', role);
       
@@ -109,8 +109,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             password,
             options: {
               data: {
-                first_name: 'User',
-                last_name: 'Name',
+                first_name: firstName,
+                last_name: lastName,
                 role: role
               }
             }
@@ -127,8 +127,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .insert({
                 user_id: signUpData.user.id,
                 email: email,
-                first_name: 'User',
-                last_name: 'Name',
+                first_name: firstName,
+                last_name: lastName,
                 role: role
               });
 
@@ -140,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
               id: signUpData.user.id,
               email: email,
-              name: 'User Name',
+              name: `${firstName} ${lastName}`,
               role: role
             });
           }
@@ -164,8 +164,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .insert({
               user_id: authData.user.id,
               email: email,
-              first_name: 'User',
-              last_name: 'Name',
+              first_name: firstName,
+              last_name: lastName,
               role: role
             })
             .select()
@@ -176,19 +176,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Failed to create user profile');
           }
           teamMember = newTeamMember;
-        }
-
-        // Update role if different
-        if (teamMember.role !== role) {
+        } else {
+          // Update existing team member with new names and role if provided
           const { data: updatedMember, error: updateError } = await supabase
             .from('team_members')
-            .update({ role: role })
+            .update({ 
+              role: role,
+              first_name: firstName,
+              last_name: lastName
+            })
             .eq('id', teamMember.id)
             .select()
             .single();
 
           if (updateError) {
-            console.error('Error updating role:', updateError);
+            console.error('Error updating team member:', updateError);
           } else {
             teamMember = updatedMember;
           }

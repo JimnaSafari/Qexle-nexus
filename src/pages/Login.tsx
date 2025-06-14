@@ -15,6 +15,8 @@ const Login = () => {
   const { toast } = useToast();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     role: '' as UserRole | ''
@@ -26,7 +28,7 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password || !formData.role) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.role) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -38,7 +40,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password, formData.role);
+      await login(formData.email, formData.password, formData.role, formData.firstName, formData.lastName);
       
       toast({
         title: "Success",
@@ -71,6 +73,30 @@ const Login = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  placeholder="Enter your first name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                  placeholder="Enter your last name"
+                  required
+                />
+              </div>
+            </div>
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
