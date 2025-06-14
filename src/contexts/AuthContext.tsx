@@ -1,11 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/lib/supabase';
 
 interface User {
   id: string;
@@ -32,49 +27,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user is logged in on app start
     const getUser = async () => {
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      
-      if (supabaseUser) {
-        // Get user profile from team_members table
-        const { data: profile } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('email', supabaseUser.email)
-          .single();
+      try {
+        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
         
-        if (profile) {
-          setUser({
-            id: supabaseUser.id,
-            email: supabaseUser.email!,
-            name: `${profile.first_name} ${profile.last_name}`,
-            role: profile.role
-          });
+        if (supabaseUser) {
+          // Get user profile from team_members table
+          const { data: profile } = await supabase
+            .from('team_members')
+            .select('*')
+            .eq('email', supabaseUser.email)
+            .single();
+          
+          if (profile) {
+            setUser({
+              id: supabaseUser.id,
+              email: supabaseUser.email!,
+              name: `${profile.first_name} ${profile.last_name}`,
+              role: profile.role
+            });
+          }
         }
+      } catch (error) {
+        console.error('Error getting user:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     getUser();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profile } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-        
-        if (profile) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: `${profile.first_name} ${profile.last_name}`,
-            role: profile.role
-          });
+      try {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const { data: profile } = await supabase
+            .from('team_members')
+            .select('*')
+            .eq('email', session.user.email)
+            .single();
+          
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: `${profile.first_name} ${profile.last_name}`,
+              role: profile.role
+            });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
+      } catch (error) {
+        console.error('Auth state change error:', error);
       }
     });
 
@@ -110,10 +114,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setUser(null);
-    window.location.href = '/login';
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const isAuthenticated = !!user;
@@ -140,5 +148,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-export { supabase };

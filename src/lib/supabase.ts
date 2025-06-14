@@ -5,10 +5,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
+  
+  // For development, we'll create a mock client to prevent crashes
+  // In production, you must have these environment variables set
+  const mockUrl = 'https://placeholder.supabase.co';
+  const mockKey = 'placeholder-key';
+  
+  console.warn('Using placeholder Supabase configuration. Authentication will not work until you connect to Supabase.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co', 
+  supabaseAnonKey || 'placeholder-key'
+);
 
 // Database types
 export interface TeamMember {
