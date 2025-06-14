@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,72 +10,94 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 
-interface LeaveRequest {
-  id: number;
-  employee: string;
-  type: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-  reason: string;
-}
+type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'] & {
+  team_member: {
+    first_name: string;
+    last_name: string;
+  };
+  approved_by_member?: {
+    first_name: string;
+    last_name: string;
+  };
+};
+
+type TeamMember = Database['public']['Tables']['team_members']['Row'];
 
 const Leaves = () => {
   const { toast } = useToast();
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
-    { 
-      id: 1, 
-      employee: 'Sarah Johnson', 
-      type: 'Annual Leave', 
-      startDate: '2024-06-20',
-      endDate: '2024-06-25',
-      status: 'Approved',
-      reason: 'Family vacation'
-    },
-    { 
-      id: 2, 
-      employee: 'Michael Brown', 
-      type: 'Sick Leave', 
-      startDate: '2024-06-15',
-      endDate: '2024-06-16',
-      status: 'Pending',
-      reason: 'Medical appointment'
-    },
-    { 
-      id: 3, 
-      employee: 'Emily Davis', 
-      type: 'Personal Leave', 
-      startDate: '2024-06-30',
-      endDate: '2024-07-02',
-      status: 'Pending',
-      reason: 'Personal matters'
-    },
-  ]);
-
+  const { isSeniorAssociate } = useAuth();
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    employee: '',
-    type: '',
-    startDate: '',
-    endDate: '',
+    team_member_id: '',
+    start_date: '',
+    end_date: '',
     reason: ''
   });
 
-  const employees = ['Sarah Johnson', 'Michael Brown', 'Emily Davis', 'David Wilson'];
   const leaveTypes = ['Annual Leave', 'Sick Leave', 'Personal Leave', 'Maternity Leave', 'Emergency Leave'];
+
+  useEffect(() => {
+    fetchLeaveRequests();
+    fetchTeamMembers();
+  }, []);
+
+  const fetchLeaveRequests = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select(`
+          *,
+          team_member:team_members!team_member_id(first_name, last_name),
+          approved_by_member:team_members!approved_by(first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeaveRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch leave requests",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .order('first_name');
+
+      if (error) throw error;
+      setTeamMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Approved': return 'mna-success';
-      case 'Pending': return 'mna-warning';
-      case 'Rejected': return 'mna-danger';
+      case 'approved': return 'mna-success';
+      case 'pending': return 'mna-warning';
+      case 'rejected': return 'mna-danger';
       default: return 'outline';
     }
   };
 
-  const handleAddRequest = () => {
-    if (!formData.employee || !formData.type || !formData.startDate || !formData.endDate || !formData.reason) {
+  const handleAddRequest = async () => {
+    if (!formData.team_member_id || !formData.start_date || !formData.end_date || !formData.reason) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -84,7 +106,7 @@ const Leaves = () => {
       return;
     }
 
-    if (new Date(formData.startDate) > new Date(formData.endDate)) {
+    if (new Date(formData.start_date) > new Date(formData.end_date)) {
       toast({
         title: "Error",
         description: "End date must be after start date",
@@ -93,49 +115,124 @@ const Leaves = () => {
       return;
     }
 
-    const newRequest: LeaveRequest = {
-      id: Date.now(),
-      ...formData,
-      status: 'Pending'
-    };
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert([{
+          team_member_id: formData.team_member_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason
+        }]);
 
-    setLeaveRequests([...leaveRequests, newRequest]);
-    setFormData({ employee: '', type: '', startDate: '', endDate: '', reason: '' });
-    setIsDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "Leave request submitted successfully",
-    });
+      if (error) throw error;
+
+      setFormData({ team_member_id: '', start_date: '', end_date: '', reason: '' });
+      setIsDialogOpen(false);
+      fetchLeaveRequests();
+      toast({
+        title: "Success",
+        description: "Leave request submitted successfully",
+      });
+    } catch (error) {
+      console.error('Error creating leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit leave request",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleApprove = (id: number) => {
-    setLeaveRequests(leaveRequests.map(request => 
-      request.id === id 
-        ? { ...request, status: 'Approved' }
-        : request
-    ));
-    toast({
-      title: "Success",
-      description: "Leave request approved",
-    });
+  const handleApprove = async (id: string) => {
+    if (!isSeniorAssociate) {
+      toast({
+        title: "Access Denied",
+        description: "Only Senior Associates can approve leave requests",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: currentUser } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ 
+          status: 'approved',
+          approved_by: currentUser?.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchLeaveRequests();
+      toast({
+        title: "Success",
+        description: "Leave request approved",
+      });
+    } catch (error) {
+      console.error('Error approving leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve leave request",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleReject = (id: number) => {
-    setLeaveRequests(leaveRequests.map(request => 
-      request.id === id 
-        ? { ...request, status: 'Rejected' }
-        : request
-    ));
-    toast({
-      title: "Success",
-      description: "Leave request rejected",
-    });
+  const handleReject = async (id: string) => {
+    if (!isSeniorAssociate) {
+      toast({
+        title: "Access Denied",
+        description: "Only Senior Associates can reject leave requests",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: currentUser } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ 
+          status: 'rejected',
+          approved_by: currentUser?.id,
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      fetchLeaveRequests();
+      toast({
+        title: "Success",
+        description: "Leave request rejected",
+      });
+    } catch (error) {
+      console.error('Error rejecting leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject leave request",
+        variant: "destructive",
+      });
+    }
   };
 
-  const openAddDialog = () => {
-    setFormData({ employee: '', type: '', startDate: '', endDate: '', reason: '' });
-    setIsDialogOpen(true);
-  };
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -146,7 +243,7 @@ const Leaves = () => {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openAddDialog} className="bg-mna-navy hover:bg-mna-navy/90">
+            <Button className="bg-mna-navy hover:bg-mna-navy/90">
               <Plus size={16} className="mr-2" />
               New Request
             </Button>
@@ -157,48 +254,37 @@ const Leaves = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="employee">Employee</Label>
-                <Select value={formData.employee} onValueChange={(value) => setFormData({...formData, employee: value})}>
+                <Label htmlFor="team_member_id">Employee</Label>
+                <Select value={formData.team_member_id} onValueChange={(value) => setFormData({...formData, team_member_id: value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select employee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {employees.map((employee) => (
-                      <SelectItem key={employee} value={employee}>{employee}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="type">Leave Type</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select leave type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {leaveTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.first_name} {member.last_name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="startDate">Start Date</Label>
+                  <Label htmlFor="start_date">Start Date</Label>
                   <Input
-                    id="startDate"
+                    id="start_date"
                     type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({...formData, start_date: e.target.value})}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="endDate">End Date</Label>
+                  <Label htmlFor="end_date">End Date</Label>
                   <Input
-                    id="endDate"
+                    id="end_date"
                     type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({...formData, end_date: e.target.value})}
                   />
                 </div>
               </div>
@@ -230,10 +316,12 @@ const Leaves = () => {
           <Card key={request.id} className="hover:shadow-lg transition-all duration-200 hover:scale-105 animate-scale-in">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{request.employee}</CardTitle>
+                <CardTitle className="text-lg">
+                  {request.team_member?.first_name} {request.team_member?.last_name}
+                </CardTitle>
                 <Badge 
                   variant="outline" 
-                  className={`border-${getStatusColor(request.status)} text-${getStatusColor(request.status)}`}
+                  className={`border-${getStatusColor(request.status || 'pending')} text-${getStatusColor(request.status || 'pending')}`}
                 >
                   {request.status}
                 </Badge>
@@ -241,22 +329,18 @@ const Leaves = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Type:</span>
-                <Badge variant="secondary">{request.type}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Start Date:</span>
-                <span className="text-sm font-medium">{request.startDate}</span>
+                <span className="text-sm font-medium">{request.start_date}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">End Date:</span>
-                <span className="text-sm font-medium">{request.endDate}</span>
+                <span className="text-sm font-medium">{request.end_date}</span>
               </div>
               <div className="pt-2">
                 <span className="text-sm text-muted-foreground">Reason:</span>
                 <p className="text-sm mt-1">{request.reason}</p>
               </div>
-              {request.status === 'Pending' && (
+              {request.status === 'pending' && isSeniorAssociate && (
                 <div className="flex space-x-2 pt-2">
                   <Button 
                     size="sm" 

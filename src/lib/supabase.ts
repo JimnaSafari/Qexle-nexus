@@ -1,26 +1,13 @@
 
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/integrations/supabase/types';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = 'https://tsqqfoefpfmvpwofbmbg.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzcXFmb2VmcGZtdnB3b2ZibWJnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk5MDI0NzcsImV4cCI6MjA2NTQ3ODQ3N30.qcDbF6l_fzh605OfyM05d9z5J1OB3hlG6sCnv2sKeMU';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY');
-  
-  // For development, we'll create a mock client to prevent crashes
-  // In production, you must have these environment variables set
-  const mockUrl = 'https://placeholder.supabase.co';
-  const mockKey = 'placeholder-key';
-  
-  console.warn('Using placeholder Supabase configuration. Authentication will not work until you connect to Supabase.');
-}
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder-key'
-);
-
-// Database types
+// Database types - these now match the actual database schema
 export interface TeamMember {
   id: string;
   email: string;
