@@ -144,9 +144,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full",
                 "hover:bg-mna-accent hover:text-mna-primary",
-                (isLegalExcellenceOpen || isInLegalExcellence)
-                  ? "bg-mna-accent text-mna-primary" 
-                  : "text-muted-foreground"
+                "text-muted-foreground"
               )}
             >
               <Gavel size={18} />
@@ -162,7 +160,7 @@ const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
               )}
             </button>
 
-            {/* Legal Excellence Submenu */}
+            {/* Legal Excellence Submenu - Always visible when not collapsed and section is open */}
             {!isOpen && isLegalExcellenceOpen && (
               <div className="ml-6 mt-2 space-y-1">
                 {legalExcellenceItems.map((item) => (
