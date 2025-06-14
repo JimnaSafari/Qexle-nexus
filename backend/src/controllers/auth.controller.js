@@ -95,7 +95,7 @@ export const login = async (req, res) => {
     }
 
     // Optional: Check if the selected role matches the database role
-    // Comment out this block if you want to allow any role selection
+    // Only validate role if it's provided and different from stored role
     if (role && role !== teamMember.role) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -112,7 +112,8 @@ export const login = async (req, res) => {
       user: {
         id: teamMember.id,
         email: teamMember.email,
-        name: `${teamMember.firstName} ${teamMember.lastName}`
+        name: `${teamMember.firstName} ${teamMember.lastName}`,
+        role: teamMember.role
       }
     });
   } catch (error) {
