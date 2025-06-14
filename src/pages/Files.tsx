@@ -5,328 +5,199 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Download, FileText, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
-interface CourtFile {
+interface CaseFile {
   id: number;
-  title: string;
+  name: string;
   type: string;
-  status: string;
-  handler: string;
-  lastUpdated: string;
-  description?: string;
-  client?: string;
+  size: string;
+  uploadDate: string;
+  uploadedBy: string;
+  caseNumber: string;
 }
 
 const Files = () => {
   const { toast } = useToast();
-  const [files, setFiles] = useState<CourtFile[]>([
-    { 
-      id: 1, 
-      title: 'Johnson vs. Smith - Contract Dispute', 
-      type: 'Court', 
-      status: 'Active',
-      handler: 'Sarah Johnson',
-      lastUpdated: '2024-06-10',
-      description: 'Contract dispute case involving breach of terms',
-      client: 'Johnson Industries'
+  const { isSeniorAssociate } = useAuth();
+  const [files, setFiles] = useState<CaseFile[]>([
+    {
+      id: 1,
+      name: 'Contract_Agreement_TechCorp.pdf',
+      type: 'Contract',
+      size: '2.5 MB',
+      uploadDate: '2024-06-10',
+      uploadedBy: 'Sarah Johnson',
+      caseNumber: 'CASE-2024-001'
     },
-    { 
-      id: 2, 
-      title: 'Peterson Estate Planning', 
-      type: 'General', 
-      status: 'Complete',
-      handler: 'Michael Brown',
-      lastUpdated: '2024-06-08',
-      description: 'Complete estate planning documentation',
-      client: 'Peterson Family'
+    {
+      id: 2,
+      name: 'Court_Filing_Peterson.docx',
+      type: 'Court Filing',
+      size: '1.8 MB',
+      uploadDate: '2024-06-09',
+      uploadedBy: 'Michael Brown',
+      caseNumber: 'CASE-2024-002'
     },
-    { 
-      id: 3, 
-      title: 'Corporate Merger - TechCorp', 
-      type: 'Court', 
-      status: 'Pending',
-      handler: 'Emily Davis',
-      lastUpdated: '2024-06-09',
-      description: 'Corporate merger legal documentation and review',
-      client: 'TechCorp Industries'
-    },
-    { 
-      id: 4, 
-      title: 'Wilson Family Trust', 
-      type: 'General', 
-      status: 'Active',
-      handler: 'David Wilson',
-      lastUpdated: '2024-06-10',
-      description: 'Family trust setup and documentation',
-      client: 'Wilson Family'
-    },
+    {
+      id: 3,
+      name: 'Client_Statement_Estate.pdf',
+      type: 'Statement',
+      size: '950 KB',
+      uploadDate: '2024-06-08',
+      uploadedBy: 'Emily Davis',
+      caseNumber: 'CASE-2024-003'
+    }
   ]);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingFile, setEditingFile] = useState<CourtFile | null>(null);
   const [formData, setFormData] = useState({
-    title: '',
-    type: '',
-    status: '',
-    handler: '',
-    lastUpdated: '',
-    description: '',
-    client: ''
+    name: '',
+    type: 'Contract',
+    caseNumber: '',
+    file: null as File | null
   });
 
-  const fileTypes = ['Court', 'General'];
-  const statuses = ['Active', 'Pending', 'Complete', 'On Hold'];
-  const handlers = ['Sarah Johnson', 'Michael Brown', 'Emily Davis', 'David Wilson'];
+  const fileTypes = ['Contract', 'Court Filing', 'Statement', 'Evidence', 'Correspondence', 'Other'];
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return 'default';
-      case 'Complete': return 'mna-success';
-      case 'Pending': return 'mna-warning';
-      case 'On Hold': return 'mna-grey';
+  const getFileTypeColor = (type: string) => {
+    switch (type) {
+      case 'Contract': return 'default';
+      case 'Court Filing': return 'destructive';
+      case 'Statement': return 'secondary';
+      case 'Evidence': return 'outline';
       default: return 'outline';
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({ ...formData, file, name: file.name });
+    }
+  };
+
   const handleAddFile = () => {
-    if (!formData.title || !formData.type || !formData.status || !formData.handler) {
+    if (!formData.name || !formData.caseNumber || !formData.file) {
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all fields and select a file",
         variant: "destructive",
       });
       return;
     }
 
-    const newFile: CourtFile = {
+    const newFile: CaseFile = {
       id: Date.now(),
-      ...formData,
-      lastUpdated: new Date().toISOString().split('T')[0]
+      name: formData.name,
+      type: formData.type,
+      size: `${(formData.file.size / 1024 / 1024).toFixed(1)} MB`,
+      uploadDate: new Date().toISOString().split('T')[0],
+      uploadedBy: 'Current User', // This would come from auth context
+      caseNumber: formData.caseNumber
     };
 
     setFiles([...files, newFile]);
-    setFormData({ title: '', type: '', status: '', handler: '', lastUpdated: '', description: '', client: '' });
+    setFormData({ name: '', type: 'Contract', caseNumber: '', file: null });
     setIsDialogOpen(false);
     toast({
       title: "Success",
-      description: "Court file created successfully",
-    });
-  };
-
-  const handleEditFile = () => {
-    if (!editingFile || !formData.title || !formData.type || !formData.status || !formData.handler) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setFiles(files.map(file => 
-      file.id === editingFile.id 
-        ? { ...file, ...formData, lastUpdated: new Date().toISOString().split('T')[0] }
-        : file
-    ));
-    setEditingFile(null);
-    setFormData({ title: '', type: '', status: '', handler: '', lastUpdated: '', description: '', client: '' });
-    setIsDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "Court file updated successfully",
+      description: "File uploaded successfully",
     });
   };
 
   const handleDeleteFile = (id: number) => {
+    if (!isSeniorAssociate) {
+      toast({
+        title: "Access Denied",
+        description: "Only Senior Associates can delete files",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setFiles(files.filter(file => file.id !== id));
     toast({
       title: "Success",
-      description: "Court file deleted successfully",
+      description: "File deleted successfully",
     });
   };
 
-  const openEditDialog = (file: CourtFile) => {
-    setEditingFile(file);
-    setFormData({
-      title: file.title,
-      type: file.type,
-      status: file.status,
-      handler: file.handler,
-      lastUpdated: file.lastUpdated,
-      description: file.description || '',
-      client: file.client || ''
+  const handleDownloadFile = (fileName: string) => {
+    console.log(`Downloading file: ${fileName}`);
+    toast({
+      title: "Download Started",
+      description: `Downloading ${fileName}`,
     });
-    setIsDialogOpen(true);
   };
-
-  const openAddDialog = () => {
-    setEditingFile(null);
-    setFormData({ title: '', type: '', status: '', handler: '', lastUpdated: '', description: '', client: '' });
-    setIsDialogOpen(true);
-  };
-
-  const courtFiles = files.filter(file => file.type === 'Court');
-  const generalFiles = files.filter(file => file.type === 'General');
-
-  const FileCard = ({ file }: { file: CourtFile }) => (
-    <Card className="hover:shadow-lg transition-all duration-200 hover:scale-105 animate-scale-in">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">{file.title}</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Badge 
-              variant="outline" 
-              className={`border-${getStatusColor(file.status)} text-${getStatusColor(file.status)}`}
-            >
-              {file.status}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => openEditDialog(file)}
-            >
-              <Edit size={14} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => handleDeleteFile(file.id)}
-              className="text-mna-danger hover:text-mna-danger"
-            >
-              <Trash2 size={14} />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Handler:</span>
-          <span className="text-sm font-medium">{file.handler}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Last Updated:</span>
-          <span className="text-sm font-medium">{file.lastUpdated}</span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Type:</span>
-          <Badge variant="secondary">{file.type}</Badge>
-        </div>
-        {file.client && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Client:</span>
-            <span className="text-sm font-medium">{file.client}</span>
-          </div>
-        )}
-        {file.description && (
-          <div className="pt-2">
-            <span className="text-sm text-muted-foreground">Description:</span>
-            <p className="text-sm mt-1">{file.description}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Case Files</h1>
-          <p className="text-muted-foreground">Manage court files and general legal documents</p>
+          <p className="text-muted-foreground">Manage legal documents and case files</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openAddDialog} className="bg-mna-navy hover:bg-mna-navy/90">
+            <Button className="bg-mna-primary hover:bg-mna-primary/90">
               <Plus size={16} className="mr-2" />
-              New File
+              Upload File
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingFile ? 'Edit Case File' : 'Create New Case File'}</DialogTitle>
+              <DialogTitle>Upload New File</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="title">File Title</Label>
+                <Label htmlFor="file">Select File</Label>
                 <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="Enter file title"
+                  id="file"
+                  type="file"
+                  onChange={handleFileUpload}
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.png"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="type">Type</Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fileTypes.map((type) => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statuses.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <Label htmlFor="name">File Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="Enter file name"
+                />
               </div>
               <div>
-                <Label htmlFor="handler">Handler</Label>
-                <Select value={formData.handler} onValueChange={(value) => setFormData({...formData, handler: value})}>
+                <Label htmlFor="type">File Type</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select handler" />
+                    <SelectValue placeholder="Select file type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {handlers.map((handler) => (
-                      <SelectItem key={handler} value={handler}>{handler}</SelectItem>
+                    {fileTypes.map((type) => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="client">Client (Optional)</Label>
+                <Label htmlFor="caseNumber">Case Number</Label>
                 <Input
-                  id="client"
-                  value={formData.client}
-                  onChange={(e) => setFormData({...formData, client: e.target.value})}
-                  placeholder="Enter client name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description (Optional)</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Enter file description"
-                  className="h-20"
+                  id="caseNumber"
+                  value={formData.caseNumber}
+                  onChange={(e) => setFormData({...formData, caseNumber: e.target.value})}
+                  placeholder="Enter case number"
                 />
               </div>
               <div className="flex space-x-2">
-                <Button 
-                  onClick={editingFile ? handleEditFile : handleAddFile}
-                  className="flex-1"
-                >
-                  {editingFile ? 'Update' : 'Create'} File
+                <Button onClick={handleAddFile} className="flex-1">
+                  <Upload size={16} className="mr-2" />
+                  Upload File
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -337,37 +208,62 @@ const Files = () => {
         </Dialog>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="all">All Files</TabsTrigger>
-          <TabsTrigger value="court">Court Files</TabsTrigger>
-          <TabsTrigger value="general">General Files</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="all" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {files.map((file) => (
-              <FileCard key={file.id} file={file} />
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="court" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {courtFiles.map((file) => (
-              <FileCard key={file.id} file={file} />
-            ))}
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="general" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {generalFiles.map((file) => (
-              <FileCard key={file.id} file={file} />
-            ))}
-          </div>
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {files.map((file) => (
+          <Card key={file.id} className="hover:shadow-lg transition-all duration-200 hover:scale-105 animate-scale-in">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <FileText size={20} className="text-mna-primary" />
+                  <CardTitle className="text-lg truncate">{file.name}</CardTitle>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant={getFileTypeColor(file.type) as any}>
+                    {file.type}
+                  </Badge>
+                  {isSeniorAssociate && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="text-mna-danger hover:text-mna-danger"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Case Number:</span>
+                <span className="text-sm font-medium">{file.caseNumber}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Size:</span>
+                <span className="text-sm font-medium">{file.size}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Uploaded:</span>
+                <span className="text-sm font-medium">{file.uploadDate}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Uploaded by:</span>
+                <span className="text-sm font-medium">{file.uploadedBy}</span>
+              </div>
+              <div className="pt-2">
+                <Button 
+                  onClick={() => handleDownloadFile(file.name)}
+                  className="w-full bg-mna-accent hover:bg-mna-accent/90 text-mna-primary"
+                >
+                  <Download size={16} className="mr-2" />
+                  Download
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
