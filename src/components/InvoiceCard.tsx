@@ -20,7 +20,6 @@ const InvoiceCard = ({ invoice, onViewInvoice }: InvoiceCardProps) => {
   const handleDownloadPDF = () => {
     console.log(`Starting download for invoice ${invoice.id}`);
     generateInvoicePDF(invoice);
-    console.log(`Download initiated for invoice ${invoice.id} as PDF with 16% VAT included`);
   };
 
   return (

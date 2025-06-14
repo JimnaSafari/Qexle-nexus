@@ -2,10 +2,14 @@
 import jsPDF from 'jspdf';
 import { Invoice } from '@/types/invoice';
 import { calculateVAT, calculateTotal } from './invoiceUtils';
+import { toast } from '@/components/ui/sonner';
 
 export const generateInvoicePDF = (invoice: Invoice) => {
   try {
     console.log('Starting PDF generation for invoice:', invoice.id);
+    toast("Generating PDF...", {
+      description: `Creating invoice ${invoice.id}`
+    });
     
     const subtotal = invoice.amount;
     const vat = calculateVAT(subtotal);
@@ -13,8 +17,6 @@ export const generateInvoicePDF = (invoice: Invoice) => {
 
     // Create new PDF document
     const doc = new jsPDF();
-    
-    console.log('PDF document created, adding content...');
     
     // Set up colors and fonts
     doc.setFontSize(20);
@@ -89,59 +91,45 @@ export const generateInvoicePDF = (invoice: Invoice) => {
     // Contact information
     doc.text('MNA Africa Law Firm | Email: info@mnaafrica.com | Phone: +254-xxx-xxxx', 105, 275, { align: 'center' });
     
-    console.log('PDF content added, attempting download...');
+    console.log('PDF content created, initiating download...');
     
-    // Try multiple download methods for better browser compatibility
-    try {
-      // Method 1: Try direct save first
-      const fileName = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
-      doc.save(fileName);
-      console.log('Direct save method worked');
-      return;
-    } catch (saveError) {
-      console.log('Direct save failed, trying blob method:', saveError);
-      
-      // Method 2: Blob method as fallback
-      const pdfBlob = doc.output('blob');
-      console.log('PDF blob created, size:', pdfBlob.size);
-      
-      if (pdfBlob.size === 0) {
-        throw new Error('Generated PDF blob is empty');
-      }
-      
-      const url = URL.createObjectURL(pdfBlob);
-      console.log('Blob URL created:', url);
-      
-      // Create temporary link element and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
-      link.style.display = 'none';
-      
-      document.body.appendChild(link);
-      console.log('Link added to document, triggering click...');
-      
-      // Force click event
-      link.click();
-      
-      // Clean up after a short delay
-      setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        console.log('Cleanup completed');
-      }, 100);
-      
-      console.log('Blob download method completed');
+    // Generate filename
+    const fileName = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
+    
+    // Simple download approach
+    const pdfOutput = doc.output('blob');
+    
+    if (pdfOutput.size === 0) {
+      throw new Error('Generated PDF is empty');
     }
+    
+    // Create download link
+    const url = URL.createObjectURL(pdfOutput);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = fileName;
+    downloadLink.style.display = 'none';
+    
+    // Append to body, click, and remove
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    
+    // Clean up
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 100);
+    
+    console.log('PDF download completed successfully');
+    toast("PDF Downloaded!", {
+      description: `Invoice ${invoice.id} has been downloaded successfully`
+    });
     
   } catch (error) {
     console.error('Error generating PDF:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      invoiceId: invoice.id
+    toast("Download Failed", {
+      description: `Failed to download invoice ${invoice.id}. Please try again.`,
+      duration: 5000
     });
-    // You could add a toast notification here to inform the user of the error
-    alert(`Failed to generate PDF: ${error.message}`);
   }
 };
