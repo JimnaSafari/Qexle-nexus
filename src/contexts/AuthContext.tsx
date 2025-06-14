@@ -115,10 +115,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (authError) {
-        console.log('Sign in failed, attempting to create account:', authError.message);
+        console.log('Sign in failed:', authError.message);
+        
+        // Handle email not confirmed error specifically
+        if (authError.message.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link before signing in. If you haven\'t received the email, try signing up again.');
+        }
         
         // If user doesn't exist, try to sign them up
         if (authError.message.includes('Invalid login credentials')) {
+          console.log('User not found, attempting to create account...');
+          
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
             password,
@@ -137,8 +144,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error(signUpError.message);
           }
 
+          if (signUpData.user && !signUpData.user.email_confirmed_at) {
+            throw new Error('Account created successfully! Please check your email and click the confirmation link to complete your registration, then try signing in again.');
+          }
+
           if (signUpData.user) {
-            console.log('User created successfully');
+            console.log('User created successfully and confirmed');
             
             // Create team member record
             const { error: teamMemberError } = await supabase

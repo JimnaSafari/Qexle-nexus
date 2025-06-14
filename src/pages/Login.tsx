@@ -45,7 +45,7 @@ const Login = () => {
       
       toast({
         title: "Success",
-        description: "Login successful! If this is your first time, your account has been created.",
+        description: "Login successful!",
       });
       
       // Redirect to dashboard
@@ -53,11 +53,28 @@ const Login = () => {
       window.location.href = '/';
     } catch (error: any) {
       console.error('Login error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Login failed. Please check your credentials and try again.",
-        variant: "destructive",
-      });
+      
+      let errorMessage = error.message || "Login failed. Please check your credentials and try again.";
+      
+      // Show more helpful messages for common errors
+      if (error.message.includes('check your email')) {
+        toast({
+          title: "Email Confirmation Required",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (error.message.includes('Account created successfully')) {
+        toast({
+          title: "Account Created",
+          description: error.message,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -71,7 +88,12 @@ const Login = () => {
             MNA Africa Law Firm
           </CardTitle>
           <p className="text-muted-foreground">Sign in to your account</p>
-          <p className="text-sm text-gray-600">New users will be automatically registered</p>
+          <div className="text-sm text-gray-600 mt-2">
+            <p>New users will be automatically registered</p>
+            <p className="text-xs mt-1 text-yellow-600">
+              ⚠️ You'll need to confirm your email before you can sign in
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -139,7 +161,7 @@ const Login = () => {
               className="w-full bg-mna-primary hover:bg-mna-primary/90"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In / Sign Up'}
+              {isLoading ? 'Processing...' : 'Sign In / Sign Up'}
             </Button>
           </form>
         </CardContent>
