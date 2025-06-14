@@ -1,34 +1,36 @@
 
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import { Case } from '../models/Case.js';
+import { Task } from '../models/Task.js';
+import { User } from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all cases
+// Get all tasks with filtering and pagination
 router.get('/', auth, async (req, res) => {
   try {
-    const { status, priority, assignedTo, page = 1, limit = 10 } = req.query;
+    const { status, priority, assignee, page = 1, limit = 10 } = req.query;
     
     let filter = {};
+    
     if (status) filter.status = status;
     if (priority) filter.priority = priority;
-    if (assignedTo) filter.assignedTo = assignedTo;
+    if (assignee) filter.assignee = assignee;
 
-    const cases = await Case.find(filter)
-      .populate('clientId', 'name contactPerson email')
-      .populate('assignedTo', 'firstName lastName email')
+    const tasks = await Task.find(filter)
+      .populate('assignee', 'firstName lastName email')
       .populate('createdBy', 'firstName lastName')
-      .sort({ dueDate: 1, createdAt: -1 })
+      .populate('caseId', 'title caseNumber')
+      .sort({ deadline: 1, createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    const total = await Case.countDocuments(filter);
+    const total = await Task.countDocuments(filter);
 
     res.json({
       success: true,
-      data: cases,
+      data: tasks,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -37,7 +39,7 @@ router.get('/', auth, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get cases error:', error);
+    console.error('Get tasks error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -45,13 +47,13 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Create new case
+// Create new task
 router.post('/', auth, [
   body('title').trim().isLength({ min: 3 }),
-  body('clientId').isMongoId(),
-  body('assignedTo').isMongoId(),
-  body('priority').optional().isIn(['High', 'Medium', 'Low']),
-  body('dueDate').optional().isISO8601()
+  body('priority').isIn(['High', 'Medium', 'Low']),
+  body('status').isIn(['Pending', 'In Progress', 'Completed']),
+  body('assignee').isMongoId(),
+  body('deadline').isISO8601()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -63,35 +65,29 @@ router.post('/', auth, [
       });
     }
 
-    // Generate unique case number
-    const year = new Date().getFullYear();
-    const lastCase = await Case.findOne({}, {}, { sort: { 'createdAt': -1 } });
-    let caseNumber;
-    
-    if (lastCase && lastCase.caseNumber.startsWith(`CASE-${year}`)) {
-      const lastNumber = parseInt(lastCase.caseNumber.split('-')[2]);
-      caseNumber = `CASE-${year}-${String(lastNumber + 1).padStart(3, '0')}`;
-    } else {
-      caseNumber = `CASE-${year}-001`;
-    }
+    const { title, description, priority, status, assignee, deadline, caseId } = req.body;
 
-    const caseData = {
-      ...req.body,
-      caseNumber,
+    const task = new Task({
+      title,
+      description,
+      priority,
+      status,
+      assignee,
+      deadline,
+      caseId,
       createdBy: req.user.userId
-    };
+    });
 
-    const newCase = new Case(caseData);
-    await newCase.save();
-    await newCase.populate(['clientId', 'assignedTo', 'createdBy']);
+    await task.save();
+    await task.populate(['assignee', 'createdBy', 'caseId']);
 
     res.status(201).json({
       success: true,
-      message: 'Case created successfully',
-      data: newCase
+      message: 'Task created successfully',
+      data: task
     });
   } catch (error) {
-    console.error('Create case error:', error);
+    console.error('Create task error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -99,13 +95,13 @@ router.post('/', auth, [
   }
 });
 
-// Update case
+// Update task
 router.put('/:id', auth, [
   body('title').optional().trim().isLength({ min: 3 }),
-  body('assignedTo').optional().isMongoId(),
-  body('status').optional().isIn(['Active', 'Closed', 'Pending', 'On Hold']),
   body('priority').optional().isIn(['High', 'Medium', 'Low']),
-  body('dueDate').optional().isISO8601()
+  body('status').optional().isIn(['Pending', 'In Progress', 'Completed']),
+  body('assignee').optional().isMongoId(),
+  body('deadline').optional().isISO8601()
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -117,26 +113,33 @@ router.put('/:id', auth, [
       });
     }
 
-    const updatedCase = await Case.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    ).populate(['clientId', 'assignedTo', 'createdBy']);
+    const updates = req.body;
+    
+    // Set completion date if status is changed to Completed
+    if (updates.status === 'Completed' && !updates.completedAt) {
+      updates.completedAt = new Date();
+    }
 
-    if (!updatedCase) {
+    const task = await Task.findByIdAndUpdate(
+      req.params.id,
+      updates,
+      { new: true }
+    ).populate(['assignee', 'createdBy', 'caseId']);
+
+    if (!task) {
       return res.status(404).json({
         success: false,
-        message: 'Case not found'
+        message: 'Task not found'
       });
     }
 
     res.json({
       success: true,
-      message: 'Case updated successfully',
-      data: updatedCase
+      message: 'Task updated successfully',
+      data: task
     });
   } catch (error) {
-    console.error('Update case error:', error);
+    console.error('Update task error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
@@ -144,24 +147,24 @@ router.put('/:id', auth, [
   }
 });
 
-// Delete case
+// Delete task
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const deletedCase = await Case.findByIdAndDelete(req.params.id);
+    const task = await Task.findByIdAndDelete(req.params.id);
 
-    if (!deletedCase) {
+    if (!task) {
       return res.status(404).json({
         success: false,
-        message: 'Case not found'
+        message: 'Task not found'
       });
     }
 
     res.json({
       success: true,
-      message: 'Case deleted successfully'
+      message: 'Task deleted successfully'
     });
   } catch (error) {
-    console.error('Delete case error:', error);
+    console.error('Delete task error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error'
