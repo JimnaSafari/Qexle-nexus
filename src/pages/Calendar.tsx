@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +22,8 @@ const Calendar = () => {
     location: '',
     description: ''
   });
+
+  console.log('Calendar component rendered, events:', events.length, 'loading:', loading);
 
   const eventTypes = ['Court', 'Client', 'Internal', 'Deadline'];
 
@@ -139,82 +140,94 @@ const Calendar = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b pb-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Legal Calendar</h1>
           <p className="text-muted-foreground">Manage court dates, meetings, and deadlines</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openAddDialog} className="bg-mna-navy hover:bg-mna-navy/90">
-              <Plus size={16} className="mr-2" />
-              New Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Event Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  placeholder="Enter event title"
-                />
+        
+        <div className="flex-shrink-0">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={() => {
+                  console.log('New Event button clicked');
+                  setEditingEvent(null);
+                  setFormData({ title: '', start_time: '', end_time: '', location: '', description: '' });
+                  setIsDialogOpen(true);
+                }} 
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md shadow-lg"
+                size="lg"
+              >
+                <Plus size={20} className="mr-2" />
+                New Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>{editingEvent ? 'Edit Event' : 'Add New Event'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="title">Event Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({...formData, title: e.target.value})}
+                    placeholder="Enter event title"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="start_time">Start Date & Time</Label>
+                  <Input
+                    id="start_time"
+                    type="datetime-local"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="end_time">End Date & Time</Label>
+                  <Input
+                    id="end_time"
+                    type="datetime-local"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    placeholder="Enter location"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    placeholder="Enter event description"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button 
+                    onClick={editingEvent ? handleEditEvent : handleAddEvent}
+                    className="flex-1"
+                  >
+                    {editingEvent ? 'Update' : 'Add'} Event
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="start_time">Start Date & Time</Label>
-                <Input
-                  id="start_time"
-                  type="datetime-local"
-                  value={formData.start_time}
-                  onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="end_time">End Date & Time</Label>
-                <Input
-                  id="end_time"
-                  type="datetime-local"
-                  value={formData.end_time}
-                  onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => setFormData({...formData, location: e.target.value})}
-                  placeholder="Enter location"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Enter event description"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={editingEvent ? handleEditEvent : handleAddEvent}
-                  className="flex-1"
-                >
-                  {editingEvent ? 'Update' : 'Add'} Event
-                </Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
