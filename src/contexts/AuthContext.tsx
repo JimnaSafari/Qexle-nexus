@@ -4,17 +4,18 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
 type TeamMember = Database['public']['Tables']['team_members']['Row'];
+type UserRole = Database['public']['Enums']['user_role'];
 
 interface User {
   id: string;
   email: string;
   name: string;
-  role: string;
+  role: UserRole;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: string) => Promise<void>;
+  login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   isSeniorAssociate: boolean;
@@ -88,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, role: string) => {
+  const login = async (email: string, password: string, role: UserRole) => {
     try {
       // First check if user exists in team_members table with correct role
       const { data: teamMember } = await supabase

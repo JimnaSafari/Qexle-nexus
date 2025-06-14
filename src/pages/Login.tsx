@@ -7,6 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Database } from '@/integrations/supabase/types';
+
+type UserRole = Database['public']['Enums']['user_role'];
 
 const Login = () => {
   const { toast } = useToast();
@@ -14,11 +17,11 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    role: ''
+    role: '' as UserRole | ''
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const roles = ['Senior Associate', 'Legal Counsel', 'Junior Associate', 'Intern', 'Pupil', 'Office Assistant'];
+  const roles: UserRole[] = ['Senior Associate', 'Legal Counsel', 'Junior Associate', 'Intern', 'Pupil', 'Office Assistant'];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +94,7 @@ const Login = () => {
             </div>
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+              <Select value={formData.role} onValueChange={(value: UserRole) => setFormData({...formData, role: value})}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
