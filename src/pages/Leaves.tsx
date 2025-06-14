@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -69,7 +68,7 @@ const Leaves = () => {
     fetchCurrentUser();
   }, [user]);
 
-  // Fetch leave requests
+  // Fetch leave requests with corrected relationship names
   const fetchLeaveRequests = async () => {
     try {
       setLoading(true);
@@ -77,12 +76,12 @@ const Leaves = () => {
         .from('leave_requests')
         .select(`
           *,
-          team_member:team_members!team_member_id (
+          team_member:team_members!leave_requests_team_member_id_fkey (
             first_name,
             last_name,
             email
           ),
-          approved_by_member:team_members!approved_by (
+          approved_by_member:team_members!leave_requests_approved_by_fkey (
             first_name,
             last_name
           )
