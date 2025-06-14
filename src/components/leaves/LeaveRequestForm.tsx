@@ -102,24 +102,29 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
     }
   };
 
-  // Always show the button, but with different states
-  const buttonDisabled = !currentUserTeamMember;
-  const buttonText = currentUserTeamMember ? "Apply for Leave" : "Loading Profile...";
+  // Button state and text
+  const buttonDisabled = !currentUserTeamMember || submitting;
+  const buttonText = submitting 
+    ? "Submitting..." 
+    : !currentUserTeamMember 
+    ? "Loading Profile..." 
+    : "Apply for Leave";
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <Button 
-          className="bg-mna-navy hover:bg-mna-navy/90"
+          className="bg-mna-navy hover:bg-mna-navy/90 w-full sm:w-auto text-white font-semibold px-6 py-3 text-base"
           disabled={buttonDisabled}
+          size="lg"
         >
-          <Plus size={16} className="mr-2" />
+          <Plus size={20} className="mr-2" />
           {buttonText}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Apply for Leave</DialogTitle>
+          <DialogTitle className="text-xl font-bold">Apply for Leave</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           {!currentUserTeamMember ? (

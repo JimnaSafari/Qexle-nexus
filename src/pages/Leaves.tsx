@@ -6,7 +6,8 @@ import { LeaveStatistics } from '@/components/leaves/LeaveStatistics';
 import { LeaveTableView } from '@/components/leaves/LeaveTableView';
 import { LeaveMobileView } from '@/components/leaves/LeaveMobileView';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, User } from 'lucide-react';
+import { AlertCircle, User, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Leaves = () => {
   const { isSeniorAssociate, user, isAuthenticated } = useAuth();
@@ -50,10 +51,11 @@ const Leaves = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
+      {/* Header Section with prominent Apply Leave button */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">Leave Requests</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             {isSeniorAssociate 
               ? "Manage and approve employee leave requests" 
               : "View your leave requests and submit new applications"
@@ -67,9 +69,16 @@ const Leaves = () => {
           )}
         </div>
         
-        <div className="flex flex-col items-end gap-2">
+        {/* Prominent Apply for Leave Section */}
+        <div className="flex flex-col items-end gap-3 w-full sm:w-auto">
+          {/* Apply for Leave Button - Always visible */}
+          <div className="w-full sm:w-auto">
+            <LeaveRequestForm currentUserTeamMember={currentUserTeamMember} />
+          </div>
+          
+          {/* Status Messages */}
           {!currentUserTeamMember && !loading && (
-            <Alert className="max-w-sm">
+            <Alert className="w-full sm:max-w-sm">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
                 Unable to load your profile. The Apply for Leave button may not work properly.
@@ -77,13 +86,22 @@ const Leaves = () => {
             </Alert>
           )}
           
-          <LeaveRequestForm currentUserTeamMember={currentUserTeamMember} />
-          
           {currentUserTeamMember && (
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground text-center sm:text-right">
               Profile: {currentUserTeamMember.first_name} {currentUserTeamMember.last_name}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Alternative Apply Button if form is hidden */}
+      <div className="bg-muted/50 rounded-lg p-4 border-2 border-dashed border-muted-foreground/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">Need to Apply for Leave?</h3>
+            <p className="text-muted-foreground text-sm">Click the button to submit a new leave request</p>
+          </div>
+          <LeaveRequestForm currentUserTeamMember={currentUserTeamMember} />
         </div>
       </div>
 
