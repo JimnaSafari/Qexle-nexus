@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { API_CONFIG } from '@/config/api';
 
 const Login = () => {
   const { toast } = useToast();
@@ -36,52 +35,20 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', { email: formData.email, role: formData.role });
+      await login(formData.email, formData.password, formData.role);
       
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      toast({
+        title: "Success",
+        description: "Login successful",
       });
-
-      console.log('Login response status:', response.status);
       
-      const data = await response.json();
-      console.log('Login response data:', data);
-
-      if (response.ok) {
-        // Use the login function from AuthContext which will handle storage
-        login({
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.name,
-          role: formData.role
-        });
-        
-        // Store the token
-        localStorage.setItem('token', data.token);
-        
-        toast({
-          title: "Success",
-          description: "Login successful",
-        });
-        
-        // Redirect to dashboard
-        window.location.href = '/';
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "Login failed",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+      // Redirect to dashboard
+      window.location.href = '/';
+    } catch (error: any) {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: "Network error. Please try again.",
+        description: error.message || "Login failed",
         variant: "destructive",
       });
     } finally {
