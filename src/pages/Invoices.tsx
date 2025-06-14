@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -160,13 +161,24 @@ const Invoices = () => {
       // Contact information
       doc.text('MNA Africa Law Firm | Email: info@mnaafrica.com | Phone: +254-xxx-xxxx', 105, 275, { align: 'center' });
       
-      console.log('PDF content added, attempting to save...');
+      console.log('PDF content added, creating blob for download...');
       
-      // Save the PDF
-      const fileName = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
-      doc.save(fileName);
+      // Create blob and download manually
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
       
-      console.log('PDF saved successfully:', fileName);
+      // Create temporary link element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the URL object
+      URL.revokeObjectURL(url);
+      
+      console.log('PDF download triggered successfully');
       
     } catch (error) {
       console.error('Error generating PDF:', error);
