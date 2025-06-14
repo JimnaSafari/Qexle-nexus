@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -161,28 +160,60 @@ const Invoices = () => {
       // Contact information
       doc.text('MNA Africa Law Firm | Email: info@mnaafrica.com | Phone: +254-xxx-xxxx', 105, 275, { align: 'center' });
       
-      console.log('PDF content added, creating blob for download...');
+      console.log('PDF content added, attempting download...');
       
-      // Create blob and download manually
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      
-      // Create temporary link element and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up the URL object
-      URL.revokeObjectURL(url);
-      
-      console.log('PDF download triggered successfully');
+      // Try multiple download methods for better browser compatibility
+      try {
+        // Method 1: Try direct save first
+        const fileName = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
+        doc.save(fileName);
+        console.log('Direct save method worked');
+        return;
+      } catch (saveError) {
+        console.log('Direct save failed, trying blob method:', saveError);
+        
+        // Method 2: Blob method as fallback
+        const pdfBlob = doc.output('blob');
+        console.log('PDF blob created, size:', pdfBlob.size);
+        
+        if (pdfBlob.size === 0) {
+          throw new Error('Generated PDF blob is empty');
+        }
+        
+        const url = URL.createObjectURL(pdfBlob);
+        console.log('Blob URL created:', url);
+        
+        // Create temporary link element and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.pdf`;
+        link.style.display = 'none';
+        
+        document.body.appendChild(link);
+        console.log('Link added to document, triggering click...');
+        
+        // Force click event
+        link.click();
+        
+        // Clean up after a short delay
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          console.log('Cleanup completed');
+        }, 100);
+        
+        console.log('Blob download method completed');
+      }
       
     } catch (error) {
       console.error('Error generating PDF:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        invoiceId: invoice.id
+      });
       // You could add a toast notification here to inform the user of the error
+      alert(`Failed to generate PDF: ${error.message}`);
     }
   };
 
