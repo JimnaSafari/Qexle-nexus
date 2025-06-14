@@ -106,25 +106,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, role: UserRole, firstName: string = 'User', lastName: string = 'Name') => {
     try {
-      console.log('Attempting login for:', email, 'with role:', role);
+      console.log('Attempting to sign in user:', email);
       
-      // First try to sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // Try to sign in first
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
-        console.log('Sign in failed:', authError.message);
+      if (signInError) {
+        console.log('Sign in failed:', signInError.message);
         
-        // Handle email not confirmed error specifically
-        if (authError.message.includes('Email not confirmed')) {
-          throw new Error('Please check your email and click the confirmation link before signing in. If you haven\'t received the email, try signing up again.');
+        // If it's an email not confirmed error, throw a helpful message
+        if (signInError.message.includes('Email not confirmed')) {
+          throw new Error('Please check your email and click the confirmation link to verify your account before signing in.');
         }
         
-        // If user doesn't exist, try to sign them up
-        if (authError.message.includes('Invalid login credentials')) {
-          console.log('User not found, attempting to create account...');
+        // If invalid credentials, try to create a new account
+        if (signInError.message.includes('Invalid login credentials')) {
+          console.log('User not found, creating new account...');
           
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email,
@@ -144,46 +144,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error(signUpError.message);
           }
 
+          // Check if email confirmation is required
           if (signUpData.user && !signUpData.user.email_confirmed_at) {
-            throw new Error('Account created successfully! Please check your email and click the confirmation link to complete your registration, then try signing in again.');
+            throw new Error('Account created! Please check your email and click the confirmation link to verify your account, then try signing in again.');
           }
 
-          if (signUpData.user) {
-            console.log('User created successfully and confirmed');
-            
-            // Create team member record
-            const { error: teamMemberError } = await supabase
-              .from('team_members')
-              .insert({
-                user_id: signUpData.user.id,
-                email: email,
-                first_name: firstName,
-                last_name: lastName,
-                role: role
-              });
-
-            if (teamMemberError) {
-              console.error('Error creating team member:', teamMemberError);
-              throw new Error('Failed to create user profile');
-            }
-
-            // Set user immediately for new signups
-            setUser({
-              id: signUpData.user.id,
-              email: email,
-              name: `${firstName} ${lastName}`,
-              role: role
-            });
-          }
+          console.log('Account created and confirmed, user signed in');
           return;
         }
-        throw authError;
+        
+        // For any other error, throw it
+        throw signInError;
       }
 
-      if (authData.user) {
+      // If sign in was successful
+      if (signInData.user) {
         console.log('User signed in successfully');
         
-        // Check if team member exists, if not create one
+        // Check if team member profile exists
         let { data: teamMember, error: fetchError } = await supabase
           .from('team_members')
           .select('*')
@@ -195,12 +173,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw new Error('Failed to fetch user profile');
         }
 
+        // If no team member profile exists, create one
         if (!teamMember) {
-          console.log('Creating team member record...');
+          console.log('Creating team member profile...');
           const { data: newTeamMember, error: insertError } = await supabase
             .from('team_members')
             .insert({
-              user_id: authData.user.id,
+              user_id: signInData.user.id,
               email: email,
               first_name: firstName,
               last_name: lastName,
@@ -213,37 +192,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.error('Error creating team member:', insertError);
             throw new Error('Failed to create user profile');
           }
+          
           teamMember = newTeamMember;
-        } else {
-          // Update existing team member with new information
-          const { data: updatedMember, error: updateError } = await supabase
-            .from('team_members')
-            .update({ 
-              role: role,
-              first_name: firstName,
-              last_name: lastName
-            })
-            .eq('id', teamMember.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Error updating team member:', updateError);
-          } else {
-            teamMember = updatedMember;
-          }
         }
 
+        // Set user in state
         setUser({
-          id: authData.user.id,
-          email: authData.user.email!,
+          id: signInData.user.id,
+          email: signInData.user.email!,
           name: `${teamMember.first_name} ${teamMember.last_name}`,
           role: teamMember.role
         });
+
+        console.log('Login completed successfully');
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      throw new Error(error.message || 'Login failed');
+      throw error;
     }
   };
 

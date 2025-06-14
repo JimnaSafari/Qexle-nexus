@@ -54,16 +54,14 @@ const Login = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       
-      let errorMessage = error.message || "Login failed. Please check your credentials and try again.";
-      
-      // Show more helpful messages for common errors
+      // Handle specific error types
       if (error.message.includes('check your email')) {
         toast({
-          title: "Email Confirmation Required",
+          title: "Email Verification Required",
           description: error.message,
           variant: "destructive",
         });
-      } else if (error.message.includes('Account created successfully')) {
+      } else if (error.message.includes('Account created')) {
         toast({
           title: "Account Created",
           description: error.message,
@@ -71,7 +69,7 @@ const Login = () => {
       } else {
         toast({
           title: "Error",
-          description: errorMessage,
+          description: error.message || "Login failed. Please try again.",
           variant: "destructive",
         });
       }
@@ -91,7 +89,7 @@ const Login = () => {
           <div className="text-sm text-gray-600 mt-2">
             <p>New users will be automatically registered</p>
             <p className="text-xs mt-1 text-yellow-600">
-              ⚠️ You'll need to confirm your email before you can sign in
+              ⚠️ You may need to verify your email for new accounts
             </p>
           </div>
         </CardHeader>
