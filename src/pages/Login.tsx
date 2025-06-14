@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -14,6 +15,7 @@ type UserRole = Database['public']['Enums']['user_role'];
 const Login = () => {
   const { toast } = useToast();
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -46,6 +48,9 @@ const Login = () => {
         title: "Success",
         description: "Login successful!",
       });
+      
+      // Navigate immediately after successful login
+      navigate('/');
     } catch (error: any) {
       console.error('Login error:', error);
       
@@ -142,7 +147,7 @@ const Login = () => {
               className="w-full bg-mna-primary hover:bg-mna-primary/90"
               disabled={isLoading}
             >
-              {isLoading ? 'Processing...' : 'Sign In / Sign Up'}
+              {isLoading ? 'Signing in...' : 'Sign In / Sign Up'}
             </Button>
           </form>
         </CardContent>

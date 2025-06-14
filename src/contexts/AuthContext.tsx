@@ -30,32 +30,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let mounted = true;
 
-    // Set up auth state listener first
+    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       
       console.log('Auth state changed:', event);
       
       if (event === 'SIGNED_IN' && session?.user) {
-        // Fetch user profile only when signed in
-        try {
-          const { data: profile } = await supabase
-            .from('team_members')
-            .select('first_name, last_name, role')
-            .eq('email', session.user.email)
-            .single();
-          
-          if (profile && mounted) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              name: `${profile.first_name} ${profile.last_name}`,
-              role: profile.role
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-        }
+        // Directly set user from session data to avoid extra DB calls
+        const userData = session.user.user_metadata || {};
+        
+        setUser({
+          id: session.user.id,
+          email: session.user.email!,
+          name: `${userData.first_name || 'User'} ${userData.last_name || 'Name'}`,
+          role: userData.role || 'Junior Associate'
+        });
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
@@ -71,20 +61,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user && mounted) {
-          const { data: profile } = await supabase
-            .from('team_members')
-            .select('first_name, last_name, role')
-            .eq('email', session.user.email)
-            .single();
+          const userData = session.user.user_metadata || {};
           
-          if (profile) {
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              name: `${profile.first_name} ${profile.last_name}`,
-              role: profile.role
-            });
-          }
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: `${userData.first_name || 'User'} ${userData.last_name || 'Name'}`,
+            role: userData.role || 'Junior Associate'
+          });
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -105,13 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, role: UserRole, firstName: string = 'User', lastName: string = 'Name') => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Try to sign in first
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) {
-        // If sign in fails, try to create account
+      if (error && error.message.includes('Invalid login credentials')) {
+        // If sign in fails with invalid credentials, try to create account
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -132,7 +117,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Account created! Please check your email and verify your account before signing in.');
       }
 
-      // Don't manually set user here - let the auth state change handler do it
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // User will be set automatically by the auth state change listener
     } catch (error: any) {
       throw error;
     }
