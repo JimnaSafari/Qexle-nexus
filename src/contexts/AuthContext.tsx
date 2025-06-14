@@ -24,22 +24,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user is logged in on app start
     const storedUser = localStorage.getItem('user');
-    const storedRole = localStorage.getItem('userRole');
     const token = localStorage.getItem('token');
     
-    if (storedUser && storedRole && token) {
-      const userData = JSON.parse(storedUser);
-      setUser({ ...userData, role: storedRole });
+    console.log('Checking stored auth:', { hasUser: !!storedUser, hasToken: !!token });
+    
+    if (storedUser && token) {
+      try {
+        const userData = JSON.parse(storedUser);
+        console.log('Restoring user session:', userData);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+      }
     }
   }, []);
 
   const login = (userData: User) => {
+    console.log('Logging in user:', userData);
     setUser(userData);
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('userRole', userData.role);
   };
 
   const logout = () => {
+    console.log('Logging out user');
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
