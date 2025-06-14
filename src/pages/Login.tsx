@@ -40,7 +40,6 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Starting login process...');
       await login(formData.email, formData.password, formData.role, formData.firstName, formData.lastName);
       
       toast({
@@ -48,31 +47,15 @@ const Login = () => {
         description: "Login successful!",
       });
       
-      // Redirect to dashboard
-      console.log('Login successful, redirecting...');
       window.location.href = '/';
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Handle specific error types
-      if (error.message.includes('check your email')) {
-        toast({
-          title: "Email Verification Required",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else if (error.message.includes('Account created')) {
-        toast({
-          title: "Account Created",
-          description: error.message,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: error.message || "Login failed. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Error",
+        description: error.message || "Login failed. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -86,12 +69,6 @@ const Login = () => {
             MNA Africa Law Firm
           </CardTitle>
           <p className="text-muted-foreground">Sign in to your account</p>
-          <div className="text-sm text-gray-600 mt-2">
-            <p>New users will be automatically registered</p>
-            <p className="text-xs mt-1 text-yellow-600">
-              ⚠️ You may need to verify your email for new accounts
-            </p>
-          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
