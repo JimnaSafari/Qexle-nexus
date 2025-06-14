@@ -13,12 +13,15 @@ import { Plus, Check, X, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { generateLeaveRequestPDF } from '@/utils/pdfGenerator';
 import type { Database } from '@/integrations/supabase/types';
 
 type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'] & {
   team_member: {
     first_name: string;
     last_name: string;
+    email: string;
+    department: string;
   };
   approved_by_member?: {
     first_name: string;
@@ -28,138 +31,11 @@ type LeaveRequest = Database['public']['Tables']['leave_requests']['Row'] & {
 
 type TeamMember = Database['public']['Tables']['team_members']['Row'];
 
-// Mock data for demonstration
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: '1',
-    team_member_id: '1',
-    start_date: '2024-06-20',
-    end_date: '2024-06-25',
-    reason: 'Annual vacation to visit family in Nairobi. Need time to spend with relatives during the holiday season.',
-    status: 'pending',
-    approved_by: null,
-    approved_at: null,
-    created_at: '2024-06-14T10:30:00Z',
-    updated_at: '2024-06-14T10:30:00Z',
-    team_member: {
-      first_name: 'John',
-      last_name: 'Kamau'
-    }
-  },
-  {
-    id: '2',
-    team_member_id: '2',
-    start_date: '2024-06-18',
-    end_date: '2024-06-20',
-    reason: 'Medical appointment and recovery time for routine surgery.',
-    status: 'approved',
-    approved_by: '3',
-    approved_at: '2024-06-15T09:15:00Z',
-    created_at: '2024-06-13T14:20:00Z',
-    updated_at: '2024-06-15T09:15:00Z',
-    team_member: {
-      first_name: 'Mary',
-      last_name: 'Wanjiku'
-    },
-    approved_by_member: {
-      first_name: 'David',
-      last_name: 'Ochieng'
-    }
-  },
-  {
-    id: '3',
-    team_member_id: '4',
-    start_date: '2024-06-22',
-    end_date: '2024-06-24',
-    reason: 'Personal emergency - family matters requiring immediate attention.',
-    status: 'rejected',
-    approved_by: '3',
-    approved_at: '2024-06-14T16:45:00Z',
-    created_at: '2024-06-12T11:10:00Z',
-    updated_at: '2024-06-14T16:45:00Z',
-    team_member: {
-      first_name: 'Sarah',
-      last_name: 'Muthoni'
-    },
-    approved_by_member: {
-      first_name: 'David',
-      last_name: 'Ochieng'
-    }
-  },
-  {
-    id: '4',
-    team_member_id: '5',
-    start_date: '2024-07-01',
-    end_date: '2024-07-10',
-    reason: 'Maternity leave extension for bonding with newborn baby.',
-    status: 'approved',
-    approved_by: '3',
-    approved_at: '2024-06-13T08:30:00Z',
-    created_at: '2024-06-10T13:25:00Z',
-    updated_at: '2024-06-13T08:30:00Z',
-    team_member: {
-      first_name: 'Grace',
-      last_name: 'Akinyi'
-    },
-    approved_by_member: {
-      first_name: 'David',
-      last_name: 'Ochieng'
-    }
-  },
-  {
-    id: '5',
-    team_member_id: '6',
-    start_date: '2024-06-28',
-    end_date: '2024-06-30',
-    reason: 'Sick leave due to flu symptoms and doctor recommendation for rest.',
-    status: 'pending',
-    approved_by: null,
-    approved_at: null,
-    created_at: '2024-06-14T12:00:00Z',
-    updated_at: '2024-06-14T12:00:00Z',
-    team_member: {
-      first_name: 'Peter',
-      last_name: 'Kimani'
-    }
-  }
-];
-
-const mockTeamMembers: TeamMember[] = [
-  {
-    id: '1',
-    user_id: '1',
-    email: 'john.kamau@mna.co.ke',
-    first_name: 'John',
-    last_name: 'Kamau',
-    role: 'Junior Associate',
-    department: 'Legal',
-    phone: '+254701234567',
-    avatar_url: null,
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    last_login: null
-  },
-  {
-    id: '2',
-    user_id: '2',
-    email: 'mary.wanjiku@mna.co.ke',
-    first_name: 'Mary',
-    last_name: 'Wanjiku',
-    role: 'Legal Counsel',
-    department: 'Legal',
-    phone: '+254701234568',
-    avatar_url: null,
-    created_at: '2024-01-15T10:00:00Z',
-    updated_at: '2024-01-15T10:00:00Z',
-    last_login: null
-  }
-];
-
 const Leaves = () => {
   const { toast } = useToast();
   const { isSeniorAssociate } = useAuth();
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(mockLeaveRequests);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(mockTeamMembers);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -169,44 +45,85 @@ const Leaves = () => {
     reason: ''
   });
 
-  // Generate PDF for leave request
-  const generatePDF = (request: LeaveRequest) => {
-    const doc = `
-      LEAVE REQUEST REPORT
-      ===================
-      
-      Employee: ${request.team_member?.first_name} ${request.team_member?.last_name}
-      Start Date: ${request.start_date}
-      End Date: ${request.end_date}
-      Status: ${request.status?.toUpperCase()}
-      
-      Reason:
-      ${request.reason}
-      
-      ${request.status === 'approved' ? `Approved by: ${request.approved_by_member?.first_name} ${request.approved_by_member?.last_name}` : ''}
-      ${request.approved_at ? `Approved on: ${new Date(request.approved_at).toLocaleDateString()}` : ''}
-      
-      Generated on: ${new Date().toLocaleDateString()}
-      
-      MNA Africa Law Firm
-      Leave Management System
-    `;
+  // Fetch team members
+  const fetchTeamMembers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .order('first_name');
 
-    const blob = new Blob([doc], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `leave-request-${request.team_member?.first_name}-${request.team_member?.last_name}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: "Download Started",
-      description: "Leave request document is being downloaded",
-    });
+      if (error) throw error;
+      setTeamMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch team members",
+        variant: "destructive",
+      });
+    }
   };
+
+  // Fetch leave requests with team member details
+  const fetchLeaveRequests = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select(`
+          *,
+          team_member:team_members!leave_requests_team_member_id_fkey(
+            first_name,
+            last_name,
+            email,
+            department
+          ),
+          approved_by_member:team_members!leave_requests_approved_by_fkey(
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeaveRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch leave requests",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeamMembers();
+    fetchLeaveRequests();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('leave-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leave_requests'
+        },
+        () => {
+          fetchLeaveRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -236,32 +153,37 @@ const Leaves = () => {
       return;
     }
 
-    // Add to mock data for demo
-    const newRequest: LeaveRequest = {
-      id: Date.now().toString(),
-      team_member_id: formData.team_member_id,
-      start_date: formData.start_date,
-      end_date: formData.end_date,
-      reason: formData.reason,
-      status: 'pending',
-      approved_by: null,
-      approved_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      team_member: {
-        first_name: 'New',
-        last_name: 'Employee'
-      }
-    };
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          team_member_id: formData.team_member_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason,
+          status: 'pending'
+        });
 
-    setLeaveRequests([newRequest, ...leaveRequests]);
-    setFormData({ team_member_id: '', start_date: '', end_date: '', reason: '' });
-    setIsDialogOpen(false);
-    
-    toast({
-      title: "Success",
-      description: "Leave request submitted successfully",
-    });
+      if (error) throw error;
+
+      setFormData({ team_member_id: '', start_date: '', end_date: '', reason: '' });
+      setIsDialogOpen(false);
+      
+      toast({
+        title: "Success",
+        description: "Leave request submitted successfully",
+      });
+    } catch (error) {
+      console.error('Error creating leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit leave request",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleApprove = async (id: string) => {
@@ -274,16 +196,29 @@ const Leaves = () => {
       return;
     }
 
-    setLeaveRequests(prev => prev.map(req => 
-      req.id === id 
-        ? { ...req, status: 'approved', approved_at: new Date().toISOString() }
-        : req
-    ));
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ 
+          status: 'approved',
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', id);
 
-    toast({
-      title: "Success",
-      description: "Leave request approved",
-    });
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Leave request approved",
+      });
+    } catch (error) {
+      console.error('Error approving leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to approve leave request",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleReject = async (id: string) => {
@@ -296,15 +231,36 @@ const Leaves = () => {
       return;
     }
 
-    setLeaveRequests(prev => prev.map(req => 
-      req.id === id 
-        ? { ...req, status: 'rejected', approved_at: new Date().toISOString() }
-        : req
-    ));
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .update({ 
+          status: 'rejected',
+          approved_at: new Date().toISOString()
+        })
+        .eq('id', id);
 
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Leave request rejected",
+      });
+    } catch (error) {
+      console.error('Error rejecting leave request:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject leave request",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadPDF = (request: LeaveRequest) => {
+    generateLeaveRequestPDF(request);
     toast({
-      title: "Success",
-      description: "Leave request rejected",
+      title: "Download Started",
+      description: "Leave request document is being downloaded",
     });
   };
 
@@ -336,7 +292,7 @@ const Leaves = () => {
                   <SelectContent>
                     {teamMembers.map((member) => (
                       <SelectItem key={member.id} value={member.id}>
-                        {member.first_name} {member.last_name}
+                        {member.first_name} {member.last_name} - {member.role}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -373,8 +329,8 @@ const Leaves = () => {
                 />
               </div>
               <div className="flex space-x-2">
-                <Button onClick={handleAddRequest} className="flex-1">
-                  Submit Request
+                <Button onClick={handleAddRequest} disabled={loading} className="flex-1">
+                  {loading ? 'Submitting...' : 'Submit Request'}
                 </Button>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
@@ -391,78 +347,92 @@ const Leaves = () => {
           <CardTitle>Leave Requests Overview</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Dates</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {leaveRequests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell className="font-medium">
-                    {request.team_member?.first_name} {request.team_member?.last_name}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm">
-                      <div>From: {request.start_date}</div>
-                      <div>To: {request.end_date}</div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate" title={request.reason}>
-                      {request.reason}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge 
-                      variant="outline" 
-                      className={`border-${getStatusColor(request.status || 'pending')} text-${getStatusColor(request.status || 'pending')}`}
-                    >
-                      {request.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => generatePDF(request)}
-                      >
-                        <Download size={16} className="mr-1" />
-                        PDF
-                      </Button>
-                      {request.status === 'pending' && isSeniorAssociate && (
-                        <>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleApprove(request.id)}
-                            className="bg-mna-success hover:bg-mna-success/90 text-white"
-                          >
-                            <Check size={16} className="mr-1" />
-                            Approve
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            onClick={() => handleReject(request.id)}
-                            className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white"
-                          >
-                            <X size={16} className="mr-1" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="text-center py-4">Loading leave requests...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Employee</TableHead>
+                  <TableHead>Dates</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {leaveRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <div>{request.team_member?.first_name} {request.team_member?.last_name}</div>
+                        <div className="text-sm text-muted-foreground">{request.team_member?.department}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>From: {new Date(request.start_date).toLocaleDateString()}</div>
+                        <div>To: {new Date(request.end_date).toLocaleDateString()}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="max-w-xs truncate" title={request.reason}>
+                        {request.reason}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant="outline" 
+                        className={`border-${getStatusColor(request.status || 'pending')} text-${getStatusColor(request.status || 'pending')}`}
+                      >
+                        {request.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownloadPDF(request)}
+                        >
+                          <Download size={16} className="mr-1" />
+                          PDF
+                        </Button>
+                        {request.status === 'pending' && isSeniorAssociate && (
+                          <>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleApprove(request.id)}
+                              className="bg-mna-success hover:bg-mna-success/90 text-white"
+                            >
+                              <Check size={16} className="mr-1" />
+                              Approve
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              onClick={() => handleReject(request.id)}
+                              className="border-mna-danger text-mna-danger hover:bg-mna-danger hover:text-white"
+                            >
+                              <X size={16} className="mr-1" />
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {leaveRequests.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">
+                      No leave requests found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -485,12 +455,16 @@ const Leaves = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Department:</span>
+                <span className="text-sm font-medium">{request.team_member?.department}</span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Start Date:</span>
-                <span className="text-sm font-medium">{request.start_date}</span>
+                <span className="text-sm font-medium">{new Date(request.start_date).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">End Date:</span>
-                <span className="text-sm font-medium">{request.end_date}</span>
+                <span className="text-sm font-medium">{new Date(request.end_date).toLocaleDateString()}</span>
               </div>
               <div className="pt-2">
                 <span className="text-sm text-muted-foreground">Reason:</span>
@@ -500,7 +474,7 @@ const Leaves = () => {
                 <Button 
                   size="sm" 
                   variant="outline"
-                  onClick={() => generatePDF(request)}
+                  onClick={() => handleDownloadPDF(request)}
                   className="flex-1"
                 >
                   <Download size={16} className="mr-1" />

@@ -1,127 +1,124 @@
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Plus, Download, Eye } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { generateInvoicePDF } from '@/utils/pdfGenerator';
+import type { Database } from '@/integrations/supabase/types';
 
-interface Invoice {
-  id: string;
-  clientName: string;
-  amount: number;
-  currency: string;
-  status: string;
-  dueDate: string;
-  createdDate: string;
-}
+type Invoice = Database['public']['Tables']['invoices']['Row'] & {
+  client: {
+    name: string;
+    email: string;
+    phone: string;
+    company: string;
+    address: string;
+  };
+  case: {
+    title: string;
+  };
+  created_by_member: {
+    first_name: string;
+    last_name: string;
+  };
+};
 
 const Invoices = () => {
-  const invoices: Invoice[] = [
-    { 
-      id: 'INV-001', 
-      clientName: 'TechCorp Industries',
-      amount: 15000,
-      currency: 'KES',
-      status: 'Paid',
-      dueDate: '2024-06-15',
-      createdDate: '2024-05-15'
-    },
-    { 
-      id: 'INV-002', 
-      clientName: 'Global Investments Ltd',
-      amount: 25000,
-      currency: 'KES',
-      status: 'Pending',
-      dueDate: '2024-06-20',
-      createdDate: '2024-05-20'
-    },
-    { 
-      id: 'INV-003', 
-      clientName: 'Estate Planning Solutions',
-      amount: 8000,
-      currency: 'KES',
-      status: 'Overdue',
-      dueDate: '2024-06-01',
-      createdDate: '2024-05-01'
-    },
-    { 
-      id: 'INV-004', 
-      clientName: 'Manufacturing Co.',
-      amount: 12000,
-      currency: 'KES',
-      status: 'Draft',
-      dueDate: '2024-06-25',
-      createdDate: '2024-06-10'
-    },
-  ];
+  const { toast } = useToast();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const VAT_RATE = 0.16; // 16% VAT
+  // Fetch invoices from database
+  const fetchInvoices = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          client:clients(
+            name,
+            email,
+            phone,
+            company,
+            address
+          ),
+          case:cases(
+            title
+          ),
+          created_by_member:team_members!invoices_created_by_fkey(
+            first_name,
+            last_name
+          )
+        `)
+        .order('created_at', { ascending: false });
 
-  const calculateVAT = (amount: number) => {
-    return amount * VAT_RATE;
+      if (error) throw error;
+      setInvoices(data || []);
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch invoices",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const calculateTotal = (amount: number) => {
-    return amount + calculateVAT(amount);
-  };
+  useEffect(() => {
+    fetchInvoices();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('invoices-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices'
+        },
+        () => {
+          fetchInvoices();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Paid': return 'bg-mna-success text-white';
-      case 'Pending': return 'bg-mna-accent text-mna-primary';
-      case 'Overdue': return 'bg-mna-danger text-white';
-      case 'Draft': return 'bg-mna-secondary text-mna-primary';
+      case 'paid': return 'bg-mna-success text-white';
+      case 'sent': return 'bg-mna-accent text-mna-primary';
+      case 'overdue': return 'bg-mna-danger text-white';
+      case 'draft': return 'bg-mna-secondary text-mna-primary';
+      case 'cancelled': return 'bg-gray-500 text-white';
       default: return 'bg-mna-secondary text-mna-primary';
     }
   };
 
-  const generateInvoicePDF = (invoice: Invoice) => {
-    const subtotal = invoice.amount;
-    const vat = calculateVAT(subtotal);
-    const total = calculateTotal(subtotal);
-
-    // Create invoice content
-    const invoiceContent = `
-      MNA AFRICA LAW FIRM
-      Invoice: ${invoice.id}
-      
-      Client: ${invoice.clientName}
-      Date: ${invoice.createdDate}
-      Due Date: ${invoice.dueDate}
-      
-      -----------------------------------
-      INVOICE DETAILS
-      -----------------------------------
-      Subtotal: ${invoice.currency} ${subtotal.toLocaleString()}
-      VAT (16%): ${invoice.currency} ${vat.toLocaleString()}
-      -----------------------------------
-      Total: ${invoice.currency} ${total.toLocaleString()}
-      -----------------------------------
-      
-      Status: ${invoice.status}
-      
-      Thank you for your business!
-    `;
-
-    // Create and download the file
-    const blob = new Blob([invoiceContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${invoice.id}-${invoice.clientName.replace(/\s+/g, '-')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  };
-
   const handleDownloadPDF = (invoice: Invoice) => {
     generateInvoicePDF(invoice);
-    console.log(`Downloading invoice ${invoice.id} with 16% VAT included`);
+    toast({
+      title: "Download Started",
+      description: "Invoice PDF is being downloaded",
+    });
   };
 
   const handleViewInvoice = (invoiceId: string) => {
     console.log(`Viewing invoice ${invoiceId}`);
-    // This would open the invoice in a modal or new page
+    toast({
+      title: "View Invoice",
+      description: "Invoice viewer would open here",
+    });
   };
 
   return (
@@ -137,18 +134,18 @@ const Invoices = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {invoices.map((invoice) => {
-          const subtotal = invoice.amount;
-          const vat = calculateVAT(subtotal);
-          const total = calculateTotal(subtotal);
-          
-          return (
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="text-muted-foreground">Loading invoices...</div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {invoices.map((invoice) => (
             <Card key={invoice.id} className="hover:shadow-lg transition-all duration-200 hover:scale-105 animate-scale-in">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{invoice.id}</CardTitle>
-                  <Badge className={getStatusColor(invoice.status)}>
+                  <CardTitle className="text-lg">{invoice.invoice_number}</CardTitle>
+                  <Badge className={getStatusColor(invoice.status || 'draft')}>
                     {invoice.status}
                   </Badge>
                 </div>
@@ -156,28 +153,38 @@ const Invoices = () => {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Client:</span>
-                  <span className="text-sm font-medium">{invoice.clientName}</span>
+                  <span className="text-sm font-medium">{invoice.client?.name || 'Unknown Client'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Case:</span>
+                  <span className="text-sm font-medium">{invoice.case?.title || 'General Services'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Subtotal:</span>
-                  <span className="text-sm font-medium">{invoice.currency} {subtotal.toLocaleString()}</span>
+                  <span className="text-sm font-medium">KES {invoice.amount.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">VAT (16%):</span>
-                  <span className="text-sm font-medium">{invoice.currency} {vat.toLocaleString()}</span>
+                  <span className="text-sm font-medium">KES {(invoice.tax_amount || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex items-center justify-between border-t pt-2">
                   <span className="text-sm font-semibold">Total:</span>
-                  <span className="text-sm font-bold">{invoice.currency} {total.toLocaleString()}</span>
+                  <span className="text-sm font-bold">KES {invoice.total_amount.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Issue Date:</span>
+                  <span className="text-sm font-medium">{new Date(invoice.issue_date).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Due Date:</span>
-                  <span className="text-sm font-medium">{invoice.dueDate}</span>
+                  <span className="text-sm font-medium">{new Date(invoice.due_date).toLocaleDateString()}</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Created:</span>
-                  <span className="text-sm font-medium">{invoice.createdDate}</span>
-                </div>
+                {invoice.paid_date && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Paid Date:</span>
+                    <span className="text-sm font-medium text-green-600">{new Date(invoice.paid_date).toLocaleDateString()}</span>
+                  </div>
+                )}
                 <div className="pt-2 flex space-x-2">
                   <Button 
                     onClick={() => handleViewInvoice(invoice.id)}
@@ -192,14 +199,23 @@ const Invoices = () => {
                     className="flex-1 bg-mna-accent hover:bg-mna-accent/90 text-mna-primary"
                   >
                     <Download size={16} className="mr-2" />
-                    Download
+                    Download PDF
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+          {invoices.length === 0 && (
+            <div className="col-span-full text-center py-8">
+              <div className="text-muted-foreground">No invoices found</div>
+              <Button className="mt-4 bg-mna-primary hover:bg-mna-primary/90">
+                <Plus size={16} className="mr-2" />
+                Create Your First Invoice
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
