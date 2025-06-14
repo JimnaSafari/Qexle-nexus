@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .from('team_members')
             .select('*')
             .eq('email', supabaseUser.email)
-            .single();
+            .maybeSingle();
           
           if (profile) {
             setUser({
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .from('team_members')
             .select('*')
             .eq('email', session.user.email)
-            .single();
+            .maybeSingle();
           
           if (profile) {
             setUser({
@@ -91,28 +91,118 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, role: UserRole) => {
     try {
-      // First check if user exists in team_members table with correct role
-      const { data: teamMember } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('email', email)
-        .eq('role', role)
-        .single();
-
-      if (!teamMember) {
-        throw new Error('Invalid credentials or role');
-      }
-
-      // Sign in with Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting login for:', email, 'with role:', role);
+      
+      // First try to sign in with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (authError) {
+        // If user doesn't exist, try to sign them up
+        if (authError.message.includes('Invalid login credentials')) {
+          console.log('User not found, attempting to create account...');
+          
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                first_name: 'User',
+                last_name: 'Name',
+                role: role
+              }
+            }
+          });
 
-      // User will be set through the auth state change listener
+          if (signUpError) {
+            throw new Error(signUpError.message);
+          }
+
+          if (signUpData.user) {
+            // Create team member record
+            const { error: teamMemberError } = await supabase
+              .from('team_members')
+              .insert({
+                user_id: signUpData.user.id,
+                email: email,
+                first_name: 'User',
+                last_name: 'Name',
+                role: role
+              });
+
+            if (teamMemberError) {
+              console.error('Error creating team member:', teamMemberError);
+            }
+
+            // Set user immediately
+            setUser({
+              id: signUpData.user.id,
+              email: email,
+              name: 'User Name',
+              role: role
+            });
+          }
+          return;
+        }
+        throw authError;
+      }
+
+      if (authData.user) {
+        // Check if team member exists, if not create one
+        let { data: teamMember } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle();
+
+        if (!teamMember) {
+          console.log('Creating team member record...');
+          const { data: newTeamMember, error: insertError } = await supabase
+            .from('team_members')
+            .insert({
+              user_id: authData.user.id,
+              email: email,
+              first_name: 'User',
+              last_name: 'Name',
+              role: role
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating team member:', insertError);
+            throw new Error('Failed to create user profile');
+          }
+          teamMember = newTeamMember;
+        }
+
+        // Update role if different
+        if (teamMember.role !== role) {
+          const { data: updatedMember, error: updateError } = await supabase
+            .from('team_members')
+            .update({ role: role })
+            .eq('id', teamMember.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Error updating role:', updateError);
+          } else {
+            teamMember = updatedMember;
+          }
+        }
+
+        setUser({
+          id: authData.user.id,
+          email: authData.user.email!,
+          name: `${teamMember.first_name} ${teamMember.last_name}`,
+          role: teamMember.role
+        });
+      }
     } catch (error: any) {
+      console.error('Login error:', error);
       throw new Error(error.message || 'Login failed');
     }
   };

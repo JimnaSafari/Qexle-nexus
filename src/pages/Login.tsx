@@ -42,7 +42,7 @@ const Login = () => {
       
       toast({
         title: "Success",
-        description: "Login successful",
+        description: "Login successful! If this is your first time, your account has been created.",
       });
       
       // Redirect to dashboard
@@ -51,7 +51,7 @@ const Login = () => {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: error.message || "Login failed",
+        description: error.message || "Login failed. Please check your credentials.",
         variant: "destructive",
       });
     } finally {
@@ -67,6 +67,7 @@ const Login = () => {
             MNA Africa Law Firm
           </CardTitle>
           <p className="text-muted-foreground">Sign in to your account</p>
+          <p className="text-sm text-gray-600">New users will be automatically registered</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -110,7 +111,7 @@ const Login = () => {
               className="w-full bg-mna-primary hover:bg-mna-primary/90"
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Signing in...' : 'Sign In / Sign Up'}
             </Button>
           </form>
         </CardContent>
