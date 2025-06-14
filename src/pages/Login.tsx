@@ -13,7 +13,7 @@ type UserRole = Database['public']['Enums']['user_role'];
 
 const Login = () => {
   const { toast } = useToast();
-  const { login, loading: authLoading } = useAuth();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -46,8 +46,6 @@ const Login = () => {
         title: "Success",
         description: "Login successful!",
       });
-      
-      // The auth context will handle the redirect
     } catch (error: any) {
       console.error('Login error:', error);
       
@@ -60,8 +58,6 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-
-  const loading = isLoading || authLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-mna-primary to-mna-navy flex items-center justify-center p-4">
@@ -83,7 +79,7 @@ const Login = () => {
                   value={formData.firstName}
                   onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                   placeholder="Enter your first name"
-                  disabled={loading}
+                  disabled={isLoading}
                   required
                 />
               </div>
@@ -95,7 +91,7 @@ const Login = () => {
                   value={formData.lastName}
                   onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                   placeholder="Enter your last name"
-                  disabled={loading}
+                  disabled={isLoading}
                   required
                 />
               </div>
@@ -108,7 +104,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="Enter your email"
-                disabled={loading}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -120,7 +116,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Enter your password"
-                disabled={loading}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -129,7 +125,7 @@ const Login = () => {
               <Select 
                 value={formData.role} 
                 onValueChange={(value: UserRole) => setFormData({...formData, role: value})}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
@@ -144,16 +140,9 @@ const Login = () => {
             <Button 
               type="submit" 
               className="w-full bg-mna-primary hover:bg-mna-primary/90"
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </div>
-              ) : (
-                'Sign In / Sign Up'
-              )}
+              {isLoading ? 'Processing...' : 'Sign In / Sign Up'}
             </Button>
           </form>
         </CardContent>

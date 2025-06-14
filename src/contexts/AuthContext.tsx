@@ -1,9 +1,8 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
-type TeamMember = Database['public']['Tables']['team_members']['Row'];
 type UserRole = Database['public']['Enums']['user_role'];
 
 interface User {
@@ -28,36 +27,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = useCallback(async (supabaseUser: any) => {
-    try {
-      const { data: profile } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('email', supabaseUser.email)
-        .maybeSingle();
-      
-      if (profile) {
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email!,
-          name: `${profile.first_name} ${profile.last_name}`,
-          role: profile.role
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  }, []);
-
   useEffect(() => {
     let mounted = true;
 
-    const initAuth = async () => {
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
+      console.log('Auth state changed:', event);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // Fetch user profile only when signed in
+        try {
+          const { data: profile } = await supabase
+            .from('team_members')
+            .select('first_name, last_name, role')
+            .eq('email', session.user.email)
+            .single();
+          
+          if (profile && mounted) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: `${profile.first_name} ${profile.last_name}`,
+              role: profile.role
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
+      
+      if (mounted) {
+        setLoading(false);
+      }
+    });
+
+    // Check for existing session
+    const initializeAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user && mounted) {
-          await fetchUserProfile(session.user);
+          const { data: profile } = await supabase
+            .from('team_members')
+            .select('first_name, last_name, role')
+            .eq('email', session.user.email)
+            .single();
+          
+          if (profile) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: `${profile.first_name} ${profile.last_name}`,
+              role: profile.role
+            });
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -68,38 +95,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      
-      console.log('Auth state changed:', event, session?.user?.email);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        await fetchUserProfile(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-      }
-      
-      setLoading(false);
-    });
+    initializeAuth();
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, []);
 
   const login = async (email: string, password: string, role: UserRole, firstName: string = 'User', lastName: string = 'Name') => {
-    setLoading(true);
-    
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (signInError) {
+      if (error) {
         // If sign in fails, try to create account
         const { error: signUpError } = await supabase.auth.signUp({
           email,
@@ -120,8 +131,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         throw new Error('Account created! Please check your email and verify your account before signing in.');
       }
-    } finally {
-      setLoading(false);
+
+      // Don't manually set user here - let the auth state change handler do it
+    } catch (error: any) {
+      throw error;
     }
   };
 
