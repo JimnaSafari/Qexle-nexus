@@ -1,11 +1,14 @@
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Invoice } from '@/types/invoice';
 import InvoiceCard from '@/components/InvoiceCard';
+import CreateInvoiceForm from '@/components/CreateInvoiceForm';
 
 const Invoices = () => {
-  const invoices: Invoice[] = [
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([
     { 
       id: 'INV-001', 
       clientName: 'TechCorp Industries',
@@ -42,11 +45,15 @@ const Invoices = () => {
       dueDate: '2024-06-25',
       createdDate: '2024-06-10'
     },
-  ];
+  ]);
 
   const handleViewInvoice = (invoiceId: string) => {
     console.log(`Viewing invoice ${invoiceId}`);
     // This would open the invoice in a modal or new page
+  };
+
+  const handleInvoiceCreated = (newInvoice: Invoice) => {
+    setInvoices(prev => [newInvoice, ...prev]);
   };
 
   return (
@@ -56,21 +63,28 @@ const Invoices = () => {
           <h1 className="text-3xl font-bold text-foreground">Invoice Management</h1>
           <p className="text-muted-foreground">Create and manage client invoices (16% VAT included)</p>
         </div>
-        <Button className="bg-mna-primary hover:bg-mna-primary/90">
+        <Button 
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          className="bg-mna-primary hover:bg-mna-primary/90"
+        >
           <Plus size={16} className="mr-2" />
-          Create Invoice
+          {showCreateForm ? 'View Invoices' : 'Create Invoice'}
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {invoices.map((invoice) => (
-          <InvoiceCard 
-            key={invoice.id} 
-            invoice={invoice} 
-            onViewInvoice={handleViewInvoice}
-          />
-        ))}
-      </div>
+      {showCreateForm ? (
+        <CreateInvoiceForm onInvoiceCreated={handleInvoiceCreated} />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {invoices.map((invoice) => (
+            <InvoiceCard 
+              key={invoice.id} 
+              invoice={invoice} 
+              onViewInvoice={handleViewInvoice}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
