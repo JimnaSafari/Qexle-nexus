@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -28,102 +28,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUserProfile = useCallback(async (supabaseUser: any) => {
+    try {
+      const { data: profile } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('email', supabaseUser.email)
+        .maybeSingle();
+      
+      if (profile) {
+        setUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: `${profile.first_name} ${profile.last_name}`,
+          role: profile.role
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  }, []);
+
   useEffect(() => {
-    // Check if user is logged in on app start
-    const getUser = async () => {
+    let mounted = true;
+
+    const initAuth = async () => {
       try {
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (supabaseUser) {
-          console.log('Found authenticated user:', supabaseUser.email);
-          
-          // Get user profile from team_members table
-          const { data: profile } = await supabase
-            .from('team_members')
-            .select('*')
-            .eq('email', supabaseUser.email)
-            .maybeSingle();
-          
-          if (profile) {
-            console.log('Found user profile:', profile);
-            setUser({
-              id: supabaseUser.id,
-              email: supabaseUser.email!,
-              name: `${profile.first_name} ${profile.last_name}`,
-              role: profile.role
-            });
-          }
+        if (session?.user && mounted) {
+          await fetchUserProfile(session.user);
         }
       } catch (error) {
-        console.error('Error getting user:', error);
+        console.error('Error initializing auth:', error);
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
-    getUser();
+    initAuth();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       console.log('Auth state changed:', event, session?.user?.email);
       
       if (event === 'SIGNED_IN' && session?.user) {
-        const { data: profile } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('email', session.user.email)
-          .maybeSingle();
-        
-        if (profile) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: `${profile.first_name} ${profile.last_name}`,
-            role: profile.role
-          });
-        }
+        await fetchUserProfile(session.user);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
       }
+      
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchUserProfile]);
 
   const login = async (email: string, password: string, role: UserRole, firstName: string = 'User', lastName: string = 'Name') => {
-    console.log('Starting login process...');
+    setLoading(true);
     
-    // Try to sign in first
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      console.log('Sign in failed, trying to create account...');
-      
-      // If sign in fails, try to create account
-      const { error: signUpError } = await supabase.auth.signUp({
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            role: role
-          }
-        }
       });
 
-      if (signUpError) {
-        throw new Error(signUpError.message);
-      }
-      
-      throw new Error('Account created! Please check your email and verify your account before signing in.');
-    }
+      if (signInError) {
+        // If sign in fails, try to create account
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              role: role
+            }
+          }
+        });
 
-    console.log('Login successful');
+        if (signUpError) {
+          throw new Error(signUpError.message);
+        }
+        
+        throw new Error('Account created! Please check your email and verify your account before signing in.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = async () => {
