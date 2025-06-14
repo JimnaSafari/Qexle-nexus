@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Download, FileText, Upload } from 'lucide-react';
+import { Plus, Trash2, Download, FileText, Upload, CheckSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { CaseFile, DownloadProgress as DownloadProgressType } from '@/types/files';
+import EnhancedDownloadDialog from '@/components/EnhancedDownloadDialog';
+import DownloadProgress from '@/components/DownloadProgress';
 
 interface CaseFile {
   id: number;
@@ -61,6 +63,8 @@ const Files = () => {
     caseNumber: '',
     file: null as File | null
   });
+  const [selectedFiles, setSelectedFiles] = useState<number[]>([]);
+  const [downloads, setDownloads] = useState<DownloadProgressType[]>([]);
 
   const fileTypes = ['Contract', 'Court Filing', 'Statement', 'Evidence', 'Correspondence', 'Other'];
 
@@ -135,6 +139,28 @@ const Files = () => {
     });
   };
 
+  const handleSelectFile = (fileId: number) => {
+    setSelectedFiles(prev => 
+      prev.includes(fileId) 
+        ? prev.filter(id => id !== fileId)
+        : [...prev, fileId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedFiles.length === files.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles(files.map(f => f.id));
+    }
+  };
+
+  const getSelectedFiles = () => files.filter(f => selectedFiles.includes(f.id));
+
+  const clearDownloads = () => {
+    setDownloads([]);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -142,71 +168,101 @@ const Files = () => {
           <h1 className="text-3xl font-bold text-foreground">Case Files</h1>
           <p className="text-muted-foreground">Manage legal documents and case files</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-mna-primary hover:bg-mna-primary/90">
-              <Plus size={16} className="mr-2" />
-              Upload File
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Upload New File</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="file">Select File</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  onChange={handleFileUpload}
-                  accept=".pdf,.doc,.docx,.txt,.jpg,.png"
-                />
-              </div>
-              <div>
-                <Label htmlFor="name">File Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Enter file name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="type">File Type</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select file type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fileTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="caseNumber">Case Number</Label>
-                <Input
-                  id="caseNumber"
-                  value={formData.caseNumber}
-                  onChange={(e) => setFormData({...formData, caseNumber: e.target.value})}
-                  placeholder="Enter case number"
-                />
-              </div>
-              <div className="flex space-x-2">
-                <Button onClick={handleAddFile} className="flex-1">
-                  <Upload size={16} className="mr-2" />
-                  Upload File
+        <div className="flex gap-3">
+          {selectedFiles.length > 0 && (
+            <EnhancedDownloadDialog 
+              files={getSelectedFiles()}
+              trigger={
+                <Button variant="outline" className="border-mna-accent text-mna-primary">
+                  <Download size={16} className="mr-2" />
+                  Download Selected ({selectedFiles.length})
                 </Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
+              }
+            />
+          )}
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-mna-primary hover:bg-mna-primary/90">
+                <Plus size={16} className="mr-2" />
+                Upload File
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Upload New File</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="file">Select File</Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    onChange={handleFileUpload}
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.png"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="name">File Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    placeholder="Enter file name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="type">File Type</Label>
+                  <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select file type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fileTypes.map((type) => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="caseNumber">Case Number</Label>
+                  <Input
+                    id="caseNumber"
+                    value={formData.caseNumber}
+                    onChange={(e) => setFormData({...formData, caseNumber: e.target.value})}
+                    placeholder="Enter case number"
+                  />
+                </div>
+                <div className="flex space-x-2">
+                  <Button onClick={handleAddFile} className="flex-1">
+                    <Upload size={16} className="mr-2" />
+                    Upload File
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {files.length > 0 && (
+        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+            className="flex items-center gap-2"
+          >
+            <CheckSquare size={14} />
+            {selectedFiles.length === files.length ? 'Deselect All' : 'Select All'}
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            {selectedFiles.length} of {files.length} files selected
+          </span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {files.map((file) => (
@@ -214,6 +270,12 @@ const Files = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedFiles.includes(file.id)}
+                    onChange={() => handleSelectFile(file.id)}
+                    className="rounded border-gray-300"
+                  />
                   <FileText size={20} className="text-mna-primary" />
                   <CardTitle className="text-lg truncate">{file.name}</CardTitle>
                 </div>
@@ -251,19 +313,32 @@ const Files = () => {
                 <span className="text-sm text-muted-foreground">Uploaded by:</span>
                 <span className="text-sm font-medium">{file.uploadedBy}</span>
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex gap-2">
                 <Button 
                   onClick={() => handleDownloadFile(file.name)}
-                  className="w-full bg-mna-accent hover:bg-mna-accent/90 text-mna-primary"
+                  variant="outline"
+                  className="flex-1"
                 >
                   <Download size={16} className="mr-2" />
-                  Download
+                  Quick Download
                 </Button>
+                <EnhancedDownloadDialog 
+                  files={[file]}
+                  single
+                  trigger={
+                    <Button className="flex-1 bg-mna-accent hover:bg-mna-accent/90 text-mna-primary">
+                      <Download size={16} className="mr-2" />
+                      Enhanced
+                    </Button>
+                  }
+                />
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <DownloadProgress downloads={downloads} onClose={clearDownloads} />
     </div>
   );
 };
