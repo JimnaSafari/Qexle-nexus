@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,13 +27,13 @@ const Invoices = () => {
         .from('invoices')
         .select(`
           *,
-          client:client_id(
+          client:clients!invoices_client_id_fkey(
             *
           ),
-          case:case_id(
+          case:cases!invoices_case_id_fkey(
             *
           ),
-          created_by_member:created_by(
+          created_by_member:team_members!invoices_created_by_fkey(
             *
           )
         `)
