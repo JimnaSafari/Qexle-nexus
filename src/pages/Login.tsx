@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { API_CONFIG } from '@/config/api';
@@ -13,14 +14,17 @@ const Login = () => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    role: ''
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  const roles = ['Senior Associate', 'Legal Counsel', 'Junior Associate', 'Intern', 'Pupil', 'Office Assistant'];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.email || !formData.password) {
+    if (!formData.email || !formData.password || !formData.role) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -32,17 +36,14 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with:', { email: formData.email });
+      console.log('Attempting login with:', { email: formData.email, role: formData.role });
       
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
+        body: JSON.stringify(formData),
       });
 
       console.log('Login response status:', response.status);
@@ -56,7 +57,7 @@ const Login = () => {
           id: data.user.id,
           email: data.user.email,
           name: data.user.name,
-          role: data.user.role
+          role: formData.role
         });
         
         // Store the token
@@ -80,7 +81,7 @@ const Login = () => {
       console.error('Login error:', error);
       toast({
         title: "Error",
-        description: "Network error. Please check if the backend server is running.",
+        description: "Network error. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -120,6 +121,19 @@ const Login = () => {
                 placeholder="Enter your password"
                 required
               />
+            </div>
+            <div>
+              <Label htmlFor="role">Role</Label>
+              <Select value={formData.role} onValueChange={(value) => setFormData({...formData, role: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map((role) => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button 
               type="submit" 
