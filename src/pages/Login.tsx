@@ -30,13 +30,33 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Disabled sign-in functionality
-    toast({
-      title: "Sign-in Disabled",
-      description: "The sign-in function has been temporarily disabled for troubleshooting.",
-      variant: "destructive",
-    });
-    return;
+    if (!formData.email || !formData.password || !formData.role) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await login(formData.email, formData.password, formData.role, formData.firstName, formData.lastName);
+      toast({
+        title: "Success",
+        description: "Successfully signed in!",
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Sign In Failed",
+        description: error.message || "Failed to sign in. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -46,7 +66,7 @@ const Login = () => {
           <CardTitle className="text-2xl font-bold text-mna-primary">
             MNA Africa Law Firm
           </CardTitle>
-          <p className="text-muted-foreground">Sign in temporarily disabled</p>
+          <p className="text-muted-foreground">Welcome back</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -59,7 +79,6 @@ const Login = () => {
                   value={formData.firstName}
                   onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                   placeholder="Enter your first name"
-                  disabled={true}
                   required
                 />
               </div>
@@ -71,7 +90,6 @@ const Login = () => {
                   value={formData.lastName}
                   onChange={(e) => setFormData({...formData, lastName: e.target.value})}
                   placeholder="Enter your last name"
-                  disabled={true}
                   required
                 />
               </div>
@@ -84,7 +102,6 @@ const Login = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                 placeholder="Enter your email"
-                disabled={true}
                 required
               />
             </div>
@@ -96,7 +113,6 @@ const Login = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="Enter your password"
-                disabled={true}
                 required
               />
             </div>
@@ -105,7 +121,6 @@ const Login = () => {
               <Select 
                 value={formData.role} 
                 onValueChange={(value: UserRole) => setFormData({...formData, role: value})}
-                disabled={true}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select your role" />
@@ -120,16 +135,11 @@ const Login = () => {
             <Button 
               type="submit" 
               className="w-full bg-mna-primary hover:bg-mna-primary/90"
-              disabled={true}
+              disabled={isLoading}
             >
-              Sign In Disabled
+              {isLoading ? "Signing In..." : "Sign In"}
             </Button>
           </form>
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
-              Sign-in functionality has been temporarily disabled for troubleshooting purposes.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
