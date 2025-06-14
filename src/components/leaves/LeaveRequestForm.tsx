@@ -114,7 +114,7 @@ export const LeaveRequestForm = ({ currentUserTeamMember }: LeaveRequestFormProp
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <Button 
-          className="bg-mna-navy hover:bg-mna-navy/90 w-full sm:w-auto text-white font-semibold px-6 py-3 text-base"
+          className="bg-mna-navy hover:bg-mna-navy/90 w-full sm:w-auto text-mna-navy font-semibold px-6 py-3 text-base"
           disabled={buttonDisabled}
           size="lg"
         >
